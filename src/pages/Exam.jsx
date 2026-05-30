@@ -1,0 +1,289 @@
+import { useState, useEffect, useRef } from 'react'
+import { saveResume, clearResume, updateWeakness, getHistory, saveHistory, getResume } from '../lib/storage.js'
+import { SC } from '../data/pyqBank.js'
+
+const T = {
+  bg:'#0A0A0F', card:{ background:'#0F0F1A', border:'1px solid #1E1E30', borderRadius:10, padding:16 },
+  orange:'#FF6B00', blue:'#4D9FFF', pink:'#FF5588', green:'#00E5AA',
+  text:'#E8E8F0', muted:'#606080', dim:'#404060',
+}
+const btn = (col='#FF6B00', full=false) => ({
+  background:col+'18', border:`1px solid ${col}55`, color:col,
+  borderRadius:8, padding:'8px 16px', cursor:'pointer',
+  fontFamily:'inherit', fontSize:13, fontWeight:600, width:full?'100%':'auto'
+})
+
+export default function Exam({ user, examData, resumeInfo, onFinish, onHome }) {
+  // Load from resume or fresh examData
+  const initState = () => {
+    const r = getResume()
+    if (r && r.qs?.length > 0) {
+      return {
+        qs: r.qs, ans: r.ans || {}, marked: new Set(r.marked || []),
+        cur: r.cur || 0, timeLeft: r.timeLeft || 3600, cfg: r.cfg
+      }
+    }
+    return {
+      qs: examData.qs, ans: {}, marked: new Set(),
+      cur: 0, timeLeft: examData.timeLimit, cfg: examData.cfg
+    }
+  }
+
+  const init = initState()
+  const [qs] = useState(init.qs)
+  const [ans, setAns] = useState(init.ans)
+  const [marked, setMarked] = useState(init.marked)
+  const [cur, setCur] = useState(init.cur)
+  const [timeLeft, setTime] = useState(init.timeLeft)
+  const [cfg] = useState(init.cfg)
+  const [paused, setPaused] = useState(false)
+  const [showSubmit, setShowSubmit] = useState(false)
+  const timerRef = useRef(null)
+  const autoSaveRef = useRef(null)
+
+  const fmt = s => {
+    const h = Math.floor(s/3600), m = Math.floor((s%3600)/60), sec = s%60
+    return `${String(h).padStart(2,'0')}:${String(m).padStart(2,'0')}:${String(sec).padStart(2,'0')}`
+  }
+
+  // Timer
+  useEffect(() => {
+    if (!paused && timeLeft > 0) {
+      timerRef.current = setInterval(() => setTime(t => t - 1), 1000)
+    } else {
+      clearInterval(timerRef.current)
+    }
+    return () => clearInterval(timerRef.current)
+  }, [paused, timeLeft > 0])
+
+  useEffect(() => { if (timeLeft <= 0) doSubmit() }, [timeLeft])
+
+  // Auto-save every 15s
+  useEffect(() => {
+    autoSaveRef.current = setInterval(() => {
+      saveResume({
+        qs, ans, marked: [...marked], cur, timeLeft, cfg,
+        savedAt: new Date().toISOString()
+      })
+    }, 15000)
+    return () => clearInterval(autoSaveRef.current)
+  }, [ans, marked, cur, timeLeft])
+
+  const doSubmit = () => {
+    clearInterval(timerRef.current)
+    clearInterval(autoSaveRef.current)
+    let c = 0, w = 0, s = 0
+    const wQs = [], cm = {}
+    qs.forEach((q, i) => {
+      const a = ans[i]
+      if (!cm[q.chapter]) cm[q.chapter] = { c:0, w:0, t:0, sub:q.subject }
+      cm[q.chapter].t++
+      if (!a) s++
+      else if (a === q.correct) { c++; cm[q.chapter].c++ }
+      else { w++; cm[q.chapter].w++; wQs.push({ ...q, ua:a, idx:i }) }
+    })
+    const newWeakness = updateWeakness(cm)
+    const score = c*4 - w
+    const max = qs.length * 4
+    const pct = max > 0 ? Math.round(score/max*100) : 0
+    const rec = {
+      id: Date.now(),
+      date: new Date().toISOString(),
+      type: cfg?.isFull ? 'Full NEET' : cfg?.subject || 'Mixed',
+      subject: cfg?.subject || 'Mixed',
+      n: qs.length, score, max, pct, c, w, s, cm
+    }
+    const newHistory = [...getHistory(), rec]
+    saveHistory(newHistory)
+    clearResume()
+    onFinish({ c, w, s, score, max, pct, wQs, cm, rec }, newHistory, newWeakness)
+  }
+
+  const saveAndGoHome = () => {
+    clearInterval(timerRef.current)
+    saveResume({ qs, ans, marked:[...marked], cur, timeLeft, cfg, savedAt:new Date().toISOString() })
+    onHome()
+  }
+
+  const q = qs[cur]
+  const answered = Object.keys(ans).length
+  const liveScore = Object.keys(ans).filter(i => ans[i] === qs[+i]?.correct).length * 4
+    - Object.keys(ans).filter(i => ans[i] && ans[i] !== qs[+i]?.correct).length
+  const qColor = i => marked.has(i) ? '#FFAA00' : ans[i] ? T.green : '#1E1E30'
+
+  // Section ranges for full mock
+  const sections = cfg?.isFull ? [
+    { label:'Physics',   col:T.blue,   start:0,  end:Math.min(44, qs.length-1) },
+    { label:'Chemistry', col:T.orange, start:45, end:Math.min(89, qs.length-1) },
+    { label:'Biology',   col:T.pink,   start:90, end:qs.length-1 },
+  ].filter(s => s.start < qs.length) : []
+
+  return (
+    <div style={{ height:'100vh', display:'grid', gridTemplateRows:'52px 1fr 50px', background:T.bg, color:T.text, fontFamily:"'Segoe UI',system-ui,sans-serif", overflow:'hidden' }}>
+      <style>{`*{box-sizing:border-box} button:hover{filter:brightness(1.2)} ::-webkit-scrollbar{width:4px} ::-webkit-scrollbar-thumb{background:#2A2A40}`}</style>
+
+      {/* ── TOP BAR ── */}
+      <div style={{ background:'#0F0F1A', borderBottom:'1px solid #1E1E30', padding:'0 20px', display:'flex', alignItems:'center', justifyContent:'space-between' }}>
+        <div style={{ display:'flex', alignItems:'center', gap:12 }}>
+          <div style={{
+            color: paused ? '#FFAA00' : timeLeft < 300 ? T.pink : T.green,
+            fontSize:20, fontWeight:800, fontFamily:'monospace', minWidth:100
+          }}>
+            {paused ? '⏸ PAUSED' : fmt(timeLeft)}
+          </div>
+          <button onClick={() => setPaused(p => !p)} style={{ ...btn(paused?'#FFAA00':'#505070'), padding:'5px 12px', fontSize:12 }}>
+            {paused ? '▶ Resume' : '⏸ Pause'}
+          </button>
+        </div>
+        <div style={{ fontSize:12, color:T.muted, textAlign:'center' }}>
+          <span style={{ color:T.text }}>{cur+1}</span>/{qs.length} ·{' '}
+          <span style={{ color:T.green }}>{answered}</span> answered ·{' '}
+          <span style={{ color:'#FFAA00' }}>{marked.size}</span> marked ·{' '}
+          <span style={{ color:T.green, fontWeight:700 }}>Score: {liveScore}</span>
+        </div>
+        <button onClick={() => setShowSubmit(true)} style={{ ...btn(T.pink), padding:'6px 20px' }}>
+          Submit
+        </button>
+      </div>
+
+      {/* ── MAIN ── */}
+      <div style={{ display:'grid', gridTemplateColumns:'1fr 220px', overflow:'hidden' }}>
+
+        {/* Question panel */}
+        <div style={{ padding:20, overflowY:'auto' }}>
+          {paused ? (
+            <div style={{ height:'100%', display:'flex', flexDirection:'column', alignItems:'center', justifyContent:'center', gap:16, color:T.muted }}>
+              <div style={{ fontSize:56 }}>⏸</div>
+              <div style={{ fontSize:18, color:'#FFAA00', fontWeight:700 }}>Mock Paused</div>
+              <div style={{ fontSize:13, textAlign:'center', lineHeight:2 }}>
+                Timer stopped. All answers saved safely.<br/>
+                <span style={{ color:T.dim, fontSize:11 }}>Auto-saves every 15 seconds.</span>
+              </div>
+              <button onClick={() => setPaused(false)} style={{ ...btn(T.green), padding:'12px 32px', fontSize:14 }}>▶ Resume Mock</button>
+              <button onClick={saveAndGoHome} style={{ ...btn('#505070'), padding:'8px 24px', fontSize:12 }}>
+                💾 Save & Go Home
+              </button>
+            </div>
+          ) : (
+            <>
+              {/* Tags */}
+              <div style={{ display:'flex', gap:6, marginBottom:14, flexWrap:'wrap' }}>
+                <span style={{ background:(SC[q.subject]||'#888')+'20', border:`1px solid ${SC[q.subject]||'#888'}44`, color:SC[q.subject]||'#888', borderRadius:4, padding:'2px 8px', fontSize:11 }}>{q.subject}</span>
+                <span style={{ background:(q.difficulty==='hard'?T.pink:q.difficulty==='medium'?'#FFAA00':T.green)+'20', border:`1px solid ${q.difficulty==='hard'?T.pink:q.difficulty==='medium'?'#FFAA00':T.green}44`, color:q.difficulty==='hard'?T.pink:q.difficulty==='medium'?'#FFAA00':T.green, borderRadius:4, padding:'2px 8px', fontSize:11 }}>{q.difficulty}</span>
+                {q.pyq && <span style={{ background:'#AA88FF20', border:'1px solid #AA88FF44', color:'#AA88FF', borderRadius:4, padding:'2px 8px', fontSize:11 }}>PYQ {q.year||''}</span>}
+                <span style={{ color:T.dim, fontSize:11, alignSelf:'center' }}>{q.chapter}</span>
+              </div>
+
+              {/* Question */}
+              <div style={{ ...T.card, fontSize:15, lineHeight:1.8, marginBottom:18, borderColor:'#252535' }}>
+                <span style={{ color:T.dim, marginRight:8, fontWeight:700 }}>Q{cur+1}.</span>{q.question}
+              </div>
+
+              {/* Options */}
+              <div style={{ display:'flex', flexDirection:'column', gap:8 }}>
+                {['A','B','C','D'].map(opt => {
+                  const sel = ans[cur] === opt
+                  const col = SC[q.subject] || T.green
+                  return (
+                    <div key={opt}
+                      onClick={() => setAns(prev => ({ ...prev, [cur]: opt }))}
+                      style={{ ...T.card, cursor:'pointer', display:'flex', alignItems:'center', gap:12, borderColor:sel?col:'#1E1E30', background:sel?col+'15':'#0F0F1A', transition:'all 0.12s' }}
+                      onMouseEnter={e => { if(!sel) e.currentTarget.style.borderColor='#2A2A40' }}
+                      onMouseLeave={e => { if(!sel) e.currentTarget.style.borderColor='#1E1E30' }}
+                    >
+                      <div style={{ width:30, height:30, borderRadius:'50%', border:`2px solid ${sel?col:'#2A2A40'}`, color:sel?col:T.muted, display:'flex', alignItems:'center', justifyContent:'center', fontSize:13, fontWeight:700, flexShrink:0 }}>{opt}</div>
+                      <span style={{ fontSize:14, color:sel?T.text:'#B0B0C8', lineHeight:1.6 }}>{q.options[opt]}</span>
+                    </div>
+                  )
+                })}
+              </div>
+            </>
+          )}
+        </div>
+
+        {/* Sidebar palette */}
+        <div style={{ borderLeft:'1px solid #1E1E30', background:'#0D0D18', padding:12, overflowY:'auto' }}>
+          {cfg?.isFull ? (
+            sections.map(sec => (
+              <div key={sec.label} style={{ marginBottom:12 }}>
+                <div style={{ fontSize:10, color:sec.col, letterSpacing:1, marginBottom:5 }}>{sec.label.toUpperCase()}</div>
+                <div style={{ display:'flex', flexWrap:'wrap', gap:3 }}>
+                  {qs.slice(sec.start, sec.end+1).map((_, j) => {
+                    const i = sec.start + j
+                    const c = qColor(i)
+                    return (
+                      <div key={i} onClick={() => setCur(i)} style={{ width:22, height:22, borderRadius:4, border:`1px solid ${c}`, background:c+'20', color:i===cur?T.text:T.muted, display:'flex', alignItems:'center', justifyContent:'center', fontSize:9, cursor:'pointer', fontWeight:i===cur?'700':'normal' }}>
+                        {i+1}
+                      </div>
+                    )
+                  })}
+                </div>
+              </div>
+            ))
+          ) : (
+            <>
+              <div style={{ fontSize:10, color:T.dim, letterSpacing:1, marginBottom:8 }}>QUESTIONS</div>
+              <div style={{ display:'flex', flexWrap:'wrap', gap:4 }}>
+                {qs.map((_, i) => {
+                  const c = qColor(i)
+                  return (
+                    <div key={i} onClick={() => setCur(i)} style={{ width:28, height:28, borderRadius:5, border:`1px solid ${c}`, background:c+'20', color:i===cur?T.text:T.muted, display:'flex', alignItems:'center', justifyContent:'center', fontSize:10, cursor:'pointer', fontWeight:i===cur?'700':'normal' }}>
+                      {i+1}
+                    </div>
+                  )
+                })}
+              </div>
+            </>
+          )}
+
+          {/* Legend */}
+          <div style={{ marginTop:14, display:'flex', flexDirection:'column', gap:5 }}>
+            {[[T.green,'Answered'],['#FFAA00','Marked'],['#1E1E30','Skipped']].map(([c,l]) => (
+              <div key={l} style={{ display:'flex', alignItems:'center', gap:6 }}>
+                <div style={{ width:10, height:10, background:c+'25', border:`1px solid ${c}`, borderRadius:2 }}/>
+                <span style={{ color:T.dim, fontSize:10 }}>{l}</span>
+              </div>
+            ))}
+          </div>
+        </div>
+      </div>
+
+      {/* ── BOTTOM NAV ── */}
+      <div style={{ background:'#0F0F1A', borderTop:'1px solid #1E1E30', padding:'0 20px', display:'flex', alignItems:'center', justifyContent:'space-between' }}>
+        <button onClick={() => setCur(c => Math.max(0,c-1))} disabled={cur===0} style={{ ...btn('#505070'), opacity:cur===0?0.25:1, padding:'6px 18px' }}>← Prev</button>
+        <div style={{ display:'flex', gap:8 }}>
+          <button
+            onClick={() => setMarked(prev => { const n=new Set(prev); n.has(cur)?n.delete(cur):n.add(cur); return n })}
+            style={{ ...btn(marked.has(cur)?'#FFAA00':'#505070'), padding:'6px 14px' }}
+          >
+            {marked.has(cur) ? '★ Marked' : '☆ Mark'}
+          </button>
+          {ans[cur] && (
+            <button onClick={() => setAns(prev => { const n={...prev}; delete n[cur]; return n })} style={{ ...btn(T.pink), padding:'6px 12px' }}>Clear</button>
+          )}
+        </div>
+        <button onClick={() => setCur(c => Math.min(qs.length-1,c+1))} disabled={cur===qs.length-1} style={{ ...btn(T.green), opacity:cur===qs.length-1?0.25:1, padding:'6px 18px' }}>Next →</button>
+      </div>
+
+      {/* ── SUBMIT MODAL ── */}
+      {showSubmit && (
+        <div style={{ position:'fixed', inset:0, background:'rgba(0,0,0,0.85)', display:'flex', alignItems:'center', justifyContent:'center', zIndex:9999 }}>
+          <div style={{ ...T.card, maxWidth:400, width:'90%', textAlign:'center', borderColor:T.pink+'55', padding:36 }}>
+            <div style={{ fontSize:40, marginBottom:12 }}>📋</div>
+            <div style={{ fontSize:18, fontWeight:700, marginBottom:8 }}>Submit Mock?</div>
+            <div style={{ fontSize:13, color:T.muted, marginBottom:6 }}>
+              {answered} answered · {qs.length-answered} skipped · {marked.size} marked
+            </div>
+            <div style={{ fontSize:12, color:T.dim, marginBottom:24 }}>
+              Unanswered questions get 0 marks. This cannot be undone.
+            </div>
+            <div style={{ display:'flex', gap:10 }}>
+              <button onClick={() => setShowSubmit(false)} style={{ ...btn('#505070',true), padding:12 }}>Cancel</button>
+              <button onClick={() => { setShowSubmit(false); doSubmit() }} style={{ ...btn(T.pink,true), padding:12, fontWeight:700 }}>✓ Submit Now</button>
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  )
+}
