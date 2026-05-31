@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { CHAPTERS, SC, ICONS, getOfflineQs, getOfflineFull } from '../data/pyqBank.js'
+import { CHAPTERS, SC, ICONS, getOfflineQs, getOfflineFull, getChapterCounts } from '../data/pyqBank.js'
 
 const T = {
   bg:'#0A0A0F', card:{ background:'#0F0F1A', border:'1px solid #1E1E30', borderRadius:12, padding:20 },
@@ -198,20 +198,28 @@ export default function MockSetup({ user, initialCfg, onStart, onBack }) {
               <div key={sec} style={{ ...T.card, marginBottom:10 }}>
                 <div style={{ color:SC[subject], fontSize:12, fontWeight:700, marginBottom:10 }}>{sec}</div>
                 <div style={{ display:'flex', flexWrap:'wrap', gap:6 }}>
-                  {chs.map(ch => {
-                    const sel = selCh.includes(ch)
-                    return (
-                      <button key={ch}
-                        onClick={() => setSelCh(prev => sel ? prev.filter(x => x!==ch) : [...prev, ch])}
-                        style={{
-                          background: sel ? SC[subject]+'28' : '#0A0A16',
-                          border: `1px solid ${sel ? SC[subject] : '#1E1E30'}`,
-                          color: sel ? SC[subject] : T.muted,
-                          borderRadius:6, padding:'4px 10px', fontSize:11, cursor:'pointer'
-                        }}
-                      >{ch}</button>
-                    )
-                  })}
+                  {(() => {
+                    const chCounts = getChapterCounts(subject);
+                    return chs.map(ch => {
+                      const sel = selCh.includes(ch);
+                      const n = chCounts[ch] || 0;
+                      return (
+                        <button key={ch}
+                          onClick={() => setSelCh(prev => sel ? prev.filter(x => x!==ch) : [...prev, ch])}
+                          title={`${n} questions available`}
+                          style={{
+                            background: sel ? SC[subject]+'28' : '#0A0A16',
+                            border: `1px solid ${sel ? SC[subject] : '#1E1E30'}`,
+                            color: sel ? SC[subject] : n > 0 ? T.muted : T.dim,
+                            borderRadius:6, padding:'4px 10px', fontSize:11, cursor:'pointer',
+                            opacity: n === 0 ? 0.5 : 1
+                          }}
+                        >
+                          {ch} <span style={{fontSize:9, opacity:0.7}}>({n}Q)</span>
+                        </button>
+                      );
+                    });
+                  })()}
                 </div>
               </div>
             ))}
