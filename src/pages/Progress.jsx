@@ -1,3 +1,4 @@
+import React from 'react'
 import { predictAIR } from '../lib/airPredictor.js'
 import { SC, ICONS } from '../data/pyqBank.js'
 import { saveHistory, saveWeakness } from '../lib/storage.js'
@@ -69,16 +70,16 @@ export default function Progress({ user, history, weakness, onBack, onClear }) {
   const latestMock = history.length > 0 ? history[history.length-1] : null
   const latestPred = latestMock ? predictAIR(latestMock.score) : null
 
+  const [confirmingClear, setConfirmingClear] = React.useState(false)
   const handleClear = () => {
-    if (window._confirmClear) {
+    if (confirmingClear) {
       saveHistory([])
       saveWeakness({})
+      setConfirmingClear(false)
       onClear()
-      window._confirmClear = false
     } else {
-      window._confirmClear = true
-      setTimeout(() => { window._confirmClear = false }, 3000)
-      alert('⚠ Press "Clear All" again within 3 seconds to confirm. This cannot be undone.')
+      setConfirmingClear(true)
+      setTimeout(() => setConfirmingClear(false), 4000)
     }
   }
 
