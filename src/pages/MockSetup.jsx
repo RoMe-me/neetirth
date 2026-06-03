@@ -11,7 +11,7 @@ const btn = (col='#FF6B00', full=false) => ({
   borderRadius:8, padding:'9px 18px', cursor:'pointer',
   fontFamily:'inherit', fontSize:13, fontWeight:600, width:full?'100%':'auto'
 })
-const NEET_FORMAT = { Physics:45, Chemistry:45, Biology:60 }
+const NEET_FORMAT = { Physics:45, Chemistry:45, Biology:90 }
 
 export default function MockSetup({ user, initialCfg, onStart, onBack }) {
   const [step, setStep] = useState(initialCfg?.isFull ? 'full' : (initialCfg?.type || 'type'))
@@ -79,7 +79,7 @@ export default function MockSetup({ user, initialCfg, onStart, onBack }) {
         {step === 'full' && (
           <div style={T.card}>
             <div style={{ fontSize:20, fontWeight:800, color:T.orange, marginBottom:4 }}>🎯 Full NEET Mock</div>
-            <div style={{ fontSize:13, color:T.muted, marginBottom:20 }}>150 Questions · 570 Marks · Real PYQs 2006–2026</div>
+            <div style={{ fontSize:13, color:T.muted, marginBottom:20 }}>180 Questions · 720 Marks · Real PYQs 2006–2026</div>
             <div style={{ display:'grid', gridTemplateColumns:'repeat(3,1fr)', gap:12, marginBottom:24 }}>
               {Object.entries(NEET_FORMAT).map(([subj,n]) => (
                 <div key={subj} style={{ ...T.card, textAlign:'center', borderColor:(SC[subj]||'#888')+'40' }}>
