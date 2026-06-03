@@ -92,7 +92,7 @@ export default function MockSetup({ user, initialCfg, onStart, onBack }) {
             </div>
             <div style={{ ...T.card, borderColor:'#FFAA0030', marginBottom:16, fontSize:12, color:'#FFAA00', lineHeight:1.7 }}>
               📚 Real PYQs from NEET 2006–2026. Questions shuffled randomly each time.
-              Biology section is 60Q (from our 60-question bank) instead of 90Q until we expand the bank further.
+              Physics 45Q · Chemistry 45Q · Biology 90Q = 180Q total = 720 marks.
             </div>
             <button
               onClick={() => startMock({ isFull:true })}
