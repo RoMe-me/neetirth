@@ -144,11 +144,11 @@ export default function Home({ user, history, weakness, resumeInfo, onStartMock,
             <span style={{ fontSize:44 }}>🎯</span>
             <div>
               <div style={{ fontSize:18, fontWeight:800, color:T.orange }}>Full NEET Mock — 720 Marks</div>
-              <div style={{ fontSize:12, color:T.muted, marginTop:2 }}>Physics 45Q + Chemistry 45Q + Biology 60Q · Real PYQs · 3 Hours 20 Minutes</div>
+              <div style={{ fontSize:12, color:T.muted, marginTop:2 }}>Physics 45Q + Chemistry 45Q + Biology 90Q · Real PYQs · 3 Hours 20 Minutes</div>
               <div style={{ display:'flex', gap:8, marginTop:8 }}>
                 <span style={tag(T.blue)}>⚡ Physics 45Q (180 marks)</span>
                 <span style={tag(T.orange)}>⚗️ Chemistry 45Q (180 marks)</span>
-                <span style={tag(T.pink)}>🧬 Biology 60Q (240 marks)</span>
+                <span style={tag(T.pink)}>🧬 Biology 90Q (360 marks)</span>
               </div>
             </div>
           </div>
