@@ -62,7 +62,7 @@ export default function App() {
 
   if (page === 'exam') return (
     <Exam
-      user={user} examData={examData} resumeInfo={resumeInfo}
+      user={user} examData={examData || null} resumeInfo={resumeInfo}
       onFinish={(r, newHistory, newWeakness) => {
         setResults(r)
         setHistory(newHistory)
