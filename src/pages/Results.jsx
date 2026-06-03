@@ -114,7 +114,7 @@ export default function Results({ user, results, history, onNewMock, onProgress 
         {Object.keys(cm).length > 0 && (
           <div style={{ ...T.card, marginBottom:20 }}>
             <div style={{ fontSize:10, color:T.dim, letterSpacing:2, marginBottom:14 }}>CHAPTER ACCURACY — weakest first</div>
-            {Object.entries(cm).sort((a,b) => (a[1].c/a[1].t)-(b[1].c/b[1].t)).map(([ch,d]) => {
+            {Object.entries(cm).sort((a,b) => { const ra = a[1].t>0?a[1].c/a[1].t:0; const rb = b[1].t>0?b[1].c/b[1].t:0; return ra-rb; }).map(([ch,d]) => {
               const a = d.t > 0 ? Math.round(d.c/d.t*100) : 0
               const col = a>=60?T.green:a>=40?'#FFAA00':T.pink
               return (
