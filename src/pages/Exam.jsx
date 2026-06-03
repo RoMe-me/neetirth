@@ -23,6 +23,10 @@ export default function Exam({ user, examData, resumeInfo, onFinish, onHome }) {
         cur: r.cur || 0, timeLeft: r.timeLeft || 3600, cfg: r.cfg
       }
     }
+    // examData must exist if no resume — guard against null crash
+    if (!examData || !examData.qs) {
+      return { qs: [], ans: {}, marked: new Set(), cur: 0, timeLeft: 3600, cfg: {} }
+    }
     return {
       qs: examData.qs, ans: {}, marked: new Set(),
       cur: 0, timeLeft: examData.timeLimit, cfg: examData.cfg
@@ -54,7 +58,7 @@ export default function Exam({ user, examData, resumeInfo, onFinish, onHome }) {
       clearInterval(timerRef.current)
     }
     return () => clearInterval(timerRef.current)
-  }, [paused, timeLeft > 0])
+  }, [paused, timeLeft])
 
   useEffect(() => { if (timeLeft <= 0) doSubmit() }, [timeLeft])
 
