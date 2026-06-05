@@ -3,16 +3,46 @@
   <head>
     <meta charset="UTF-8"/>
     <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-    <meta name="theme-color" content="#0A0A0F"/>
-    <meta name="description" content="Neetirth — Free NEET mock tests for every aspirant. Real PYQs, AIR predictor, weakness tracker."/>
-    <title>Neetirth — Your NEET Pilgrimage</title>
+    <meta name="theme-color" content="#080811"/>
+    <meta name="description" content="Neetirth — Free NEET mock tests. Real PYQs, AIR predictor, built for every aspirant."/>
+    <title>Neetirth</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com"/>
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet"/>
     <style>
-      *{margin:0;padding:0;box-sizing:border-box}
-      body{background:#0A0A0F;color:#E8E8F0;font-family:'Segoe UI',system-ui,sans-serif;min-height:100vh}
-      #root{min-height:100vh}
-      ::-webkit-scrollbar{width:4px}
-      ::-webkit-scrollbar-track{background:#0A0A0F}
-      ::-webkit-scrollbar-thumb{background:#2A2A40;border-radius:2px}
+      *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+      :root {
+        --bg:      #080811;
+        --surface: #0D0D1C;
+        --card:    #111122;
+        --border:  #1C1C30;
+        --border2: #252540;
+        --text:    #E8E8F4;
+        --muted:   #6B6B90;
+        --dim:     #3A3A58;
+        --orange:  #FF6B00;
+        --blue:    #4D9FFF;
+        --pink:    #FF4D8D;
+        --green:   #00E5AA;
+        --gold:    #FFB830;
+        --font:    'Outfit', sans-serif;
+        --mono:    'DM Mono', monospace;
+      }
+      html { font-size: 16px; }
+      body {
+        background: var(--bg);
+        color: var(--text);
+        font-family: var(--font);
+        min-height: 100vh;
+        -webkit-font-smoothing: antialiased;
+      }
+      #root { min-height: 100vh; }
+      ::-webkit-scrollbar { width: 3px; }
+      ::-webkit-scrollbar-track { background: transparent; }
+      ::-webkit-scrollbar-thumb { background: var(--border2); border-radius: 2px; }
+      ::selection { background: #FF6B0030; color: var(--orange); }
+      button { font-family: var(--font); cursor: pointer; }
+      input, textarea { font-family: var(--font); }
     </style>
   </head>
   <body>
