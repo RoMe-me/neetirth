@@ -42,12 +42,29 @@ export default function Exam({ user, examData, resumeInfo, onFinish, onHome }) {
   const [cfg] = useState(init.cfg)
   const [paused, setPaused] = useState(false)
   const [showSubmit, setShowSubmit] = useState(false)
-  const timerRef = useRef(null)
+  const timerRef    = useRef(null)
   const autoSaveRef = useRef(null)
+  const timeMap     = useRef({})        // { questionIndex: totalSeconds }
+  const qStartTime  = useRef(Date.now()) // when current Q was last opened
 
   const fmt = s => {
     const h = Math.floor(s/3600), m = Math.floor((s%3600)/60), sec = s%60
     return `${String(h).padStart(2,'0')}:${String(m).padStart(2,'0')}:${String(sec).padStart(2,'0')}`
+  }
+
+  // Record elapsed time on current question before navigating away
+  const recordTime = (idx) => {
+    if (!paused) {
+      const elapsed = Math.floor((Date.now() - qStartTime.current) / 1000)
+      timeMap.current[idx] = (timeMap.current[idx] || 0) + elapsed
+    }
+    qStartTime.current = Date.now()
+  }
+
+  // Navigate to a question, recording time on the current one first
+  const navigateTo = (newIdx) => {
+    recordTime(cur)
+    setCur(newIdx)
   }
 
   // Timer
@@ -76,6 +93,7 @@ export default function Exam({ user, examData, resumeInfo, onFinish, onHome }) {
   const doSubmit = () => {
     clearInterval(timerRef.current)
     clearInterval(autoSaveRef.current)
+    recordTime(cur) // record time on last viewed question
     let c = 0, w = 0, s = 0
     const wQs = [], cm = {}
     qs.forEach((q, i) => {
@@ -100,11 +118,12 @@ export default function Exam({ user, examData, resumeInfo, onFinish, onHome }) {
     const newHistory = [...getHistory(), rec]
     saveHistory(newHistory)
     clearResume()
-    onFinish({ c, w, s, score, max, pct, wQs, cm, rec }, newHistory, newWeakness)
+    onFinish({ c, w, s, score, max, pct, wQs, cm, rec, timeMap: {...timeMap.current}, qs: [...qs] }, newHistory, newWeakness)
   }
 
   const saveAndGoHome = () => {
     clearInterval(timerRef.current)
+    recordTime(cur)
     saveResume({ qs, ans, marked:[...marked], cur, timeLeft, cfg, savedAt:new Date().toISOString() })
     onHome()
   }
@@ -135,7 +154,7 @@ export default function Exam({ user, examData, resumeInfo, onFinish, onHome }) {
           }}>
             {paused ? '⏸ PAUSED' : fmt(timeLeft)}
           </div>
-          <button onClick={() => setPaused(p => !p)} style={{ ...btn(paused?'#FFAA00':'#505070'), padding:'5px 12px', fontSize:12 }}>
+          <button onClick={() => { if(paused) qStartTime.current = Date.now(); setPaused(p => !p) }} style={{ ...btn(paused?'#FFAA00':'#505070'), padding:'5px 12px', fontSize:12 }}>
             {paused ? '▶ Resume' : '⏸ Pause'}
           </button>
         </div>
@@ -163,7 +182,7 @@ export default function Exam({ user, examData, resumeInfo, onFinish, onHome }) {
                 Timer stopped. All answers saved safely.<br/>
                 <span style={{ color:T.dim, fontSize:11 }}>Auto-saves every 15 seconds.</span>
               </div>
-              <button onClick={() => setPaused(false)} style={{ ...btn(T.green), padding:'12px 32px', fontSize:14 }}>▶ Resume Mock</button>
+              <button onClick={() => { qStartTime.current = Date.now(); setPaused(false) }} style={{ ...btn(T.green), padding:'12px 32px', fontSize:14 }}>▶ Resume Mock</button>
               <button onClick={saveAndGoHome} style={{ ...btn('#505070'), padding:'8px 24px', fontSize:12 }}>
                 💾 Save & Go Home
               </button>
@@ -216,7 +235,7 @@ export default function Exam({ user, examData, resumeInfo, onFinish, onHome }) {
                     const i = sec.start + j
                     const c = qColor(i)
                     return (
-                      <div key={i} onClick={() => setCur(i)} style={{ width:22, height:22, borderRadius:4, border:`1px solid ${c}`, background:c+'20', color:i===cur?T.text:T.muted, display:'flex', alignItems:'center', justifyContent:'center', fontSize:9, cursor:'pointer', fontWeight:i===cur?'700':'normal' }}>
+                      <div key={i} onClick={() => navigateTo(i)} style={{ width:22, height:22, borderRadius:4, border:`1px solid ${c}`, background:c+'20', color:i===cur?T.text:T.muted, display:'flex', alignItems:'center', justifyContent:'center', fontSize:9, cursor:'pointer', fontWeight:i===cur?'700':'normal' }}>
                         {i+1}
                       </div>
                     )
@@ -231,7 +250,7 @@ export default function Exam({ user, examData, resumeInfo, onFinish, onHome }) {
                 {qs.map((_, i) => {
                   const c = qColor(i)
                   return (
-                    <div key={i} onClick={() => setCur(i)} style={{ width:28, height:28, borderRadius:5, border:`1px solid ${c}`, background:c+'20', color:i===cur?T.text:T.muted, display:'flex', alignItems:'center', justifyContent:'center', fontSize:10, cursor:'pointer', fontWeight:i===cur?'700':'normal' }}>
+                    <div key={i} onClick={() => navigateTo(i)} style={{ width:28, height:28, borderRadius:5, border:`1px solid ${c}`, background:c+'20', color:i===cur?T.text:T.muted, display:'flex', alignItems:'center', justifyContent:'center', fontSize:10, cursor:'pointer', fontWeight:i===cur?'700':'normal' }}>
                       {i+1}
                     </div>
                   )
@@ -254,7 +273,7 @@ export default function Exam({ user, examData, resumeInfo, onFinish, onHome }) {
 
       {/* ── BOTTOM NAV ── */}
       <div style={{ background:'#0F0F1A', borderTop:'1px solid #1E1E30', padding:'0 20px', display:'flex', alignItems:'center', justifyContent:'space-between' }}>
-        <button onClick={() => setCur(c => Math.max(0,c-1))} disabled={cur===0} style={{ ...btn('#505070'), opacity:cur===0?0.25:1, padding:'6px 18px' }}>← Prev</button>
+        <button onClick={() => navigateTo(Math.max(0,cur-1))} disabled={cur===0} style={{ ...btn('#505070'), opacity:cur===0?0.25:1, padding:'6px 18px' }}>← Prev</button>
         <div style={{ display:'flex', gap:8 }}>
           <button
             onClick={() => setMarked(prev => { const n=new Set(prev); n.has(cur)?n.delete(cur):n.add(cur); return n })}
@@ -266,7 +285,7 @@ export default function Exam({ user, examData, resumeInfo, onFinish, onHome }) {
             <button onClick={() => setAns(prev => { const n={...prev}; delete n[cur]; return n })} style={{ ...btn(T.pink), padding:'6px 12px' }}>Clear</button>
           )}
         </div>
-        <button onClick={() => setCur(c => Math.min(qs.length-1,c+1))} disabled={cur===qs.length-1} style={{ ...btn(T.green), opacity:cur===qs.length-1?0.25:1, padding:'6px 18px' }}>Next →</button>
+        <button onClick={() => navigateTo(Math.min(qs.length-1,cur+1))} disabled={cur===qs.length-1} style={{ ...btn(T.green), opacity:cur===qs.length-1?0.25:1, padding:'6px 18px' }}>Next →</button>
       </div>
 
       {/* ── SUBMIT MODAL ── */}
