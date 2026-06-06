@@ -1,10 +1,19 @@
 import { useState } from 'react'
 
 const NAV = [
-  { id:'home',     icon:'⬡',  label:'Dashboard'  },
-  { id:'mock',     icon:'◎',  label:'Mock Tests'  },
-  { id:'progress', icon:'◈',  label:'Progress'    },
-  { id:'pyq',      icon:'◫',  label:'PYQ Bank'    },
+  { id:'home',     icon:'⬡', label:'Dashboard'  },
+  { id:'mock',     icon:'◎', label:'Mock Tests'  },
+  { id:'progress', icon:'◈', label:'Progress'    },
+  { id:'pyq',      icon:'◫', label:'PYQ Bank'    },
+]
+
+const COURSES = [
+  { id:'neet',    icon:'🧬', label:'NEET UG',       active:true  },
+  { id:'jee',     icon:'⚡', label:'JEE Main',       soon:true    },
+  { id:'jeeadv',  icon:'🔬', label:'JEE Advanced',  soon:true    },
+  { id:'upsc',    icon:'🏛', label:'UPSC CSE',       soon:true    },
+  { id:'cuet',    icon:'📝', label:'CUET UG',        soon:true    },
+  { id:'boards',  icon:'📚', label:'Class 12 Boards',soon:true    },
 ]
 
 export default function Layout({ page, onNav, user, children }) {
@@ -12,59 +21,103 @@ export default function Layout({ page, onNav, user, children }) {
 
   return (
     <div style={{ display:'flex', minHeight:'100vh', background:'var(--bg)' }}>
-      {/* SIDEBAR */}
+
+      {/* ── SIDEBAR ── */}
       <aside style={{
-        width: collapsed ? 64 : 220, minHeight:'100vh',
-        background:'var(--surface)', borderRight:'1px solid var(--border)',
+        width: collapsed ? 64 : 230,
+        minHeight:'100vh', background:'var(--surface)',
+        borderRight:'1px solid var(--border)',
         display:'flex', flexDirection:'column',
         transition:'width 0.2s ease', flexShrink:0,
         position:'sticky', top:0, height:'100vh', overflow:'hidden',
       }}>
+
         {/* Logo */}
-        <div style={{ padding: collapsed ? '22px 0' : '22px 20px', borderBottom:'1px solid var(--border)', display:'flex', alignItems:'center', justifyContent: collapsed ? 'center' : 'space-between' }}>
+        <div style={{ padding: collapsed?'22px 0':'22px 20px', borderBottom:'1px solid var(--border)', display:'flex', alignItems:'center', justifyContent:collapsed?'center':'space-between' }}>
           {!collapsed && (
             <div>
               <div style={{ fontSize:15, fontWeight:800, color:'var(--orange)', letterSpacing:1 }}>नीतीर्थ</div>
               <div style={{ fontSize:8, color:'var(--dim)', letterSpacing:4, marginTop:1 }}>NEETIRTH</div>
             </div>
           )}
-          <button onClick={() => setCollapsed(c=>!c)} style={{ background:'none', border:'none', color:'var(--dim)', fontSize:18, padding:'2px 4px', lineHeight:1, cursor:'pointer' }}>
-            {collapsed ? '›' : '‹'}
+          <button onClick={()=>setCollapsed(c=>!c)} style={{ background:'none', border:'none', color:'var(--dim)', fontSize:18, padding:'2px 4px', lineHeight:1, cursor:'pointer', flexShrink:0 }}>
+            {collapsed?'›':'‹'}
           </button>
         </div>
 
-        {/* Nav */}
-        <nav style={{ padding:'10px 8px', flex:1 }}>
-          {NAV.map(n => {
-            const active = page === n.id || (page==='mockSetup'&&n.id==='mock') || (page==='results'&&n.id==='mock')
-            return (
-              <button key={n.id} onClick={() => onNav(n.id)} style={{
-                width:'100%', display:'flex', alignItems:'center',
-                gap:10, padding: collapsed ? '11px 0' : '10px 12px',
-                justifyContent: collapsed ? 'center' : 'flex-start',
-                background: active ? '#FF6B0012' : 'none',
-                border: `1px solid ${active ? '#FF6B0030' : 'transparent'}`,
-                borderRadius:8, marginBottom:2,
-                color: active ? 'var(--orange)' : 'var(--muted)',
-                fontSize:13, fontWeight: active ? 600 : 400,
-                transition:'all 0.15s',
-              }}
-              onMouseEnter={e=>{ if(!active) e.currentTarget.style.color='var(--text)'; e.currentTarget.style.background='#ffffff06' }}
-              onMouseLeave={e=>{ if(!active) e.currentTarget.style.color='var(--muted)'; if(!active) e.currentTarget.style.background='none' }}
-              >
-                <span style={{ fontSize:16, flexShrink:0 }}>{n.icon}</span>
-                {!collapsed && <span>{n.label}</span>}
-              </button>
-            )
-          })}
-        </nav>
+        <div style={{ flex:1, overflowY:'auto', overflowX:'hidden' }}>
 
-        {/* User */}
-        <div style={{ padding: collapsed ? '16px 0' : '16px 20px', borderTop:'1px solid var(--border)', textAlign: collapsed ? 'center' : 'left' }}>
+          {/* Main nav */}
+          <nav style={{ padding:'10px 8px' }}>
+            {!collapsed && <div style={{ fontSize:9, color:'var(--dim)', letterSpacing:2, padding:'6px 8px 4px', textTransform:'uppercase' }}>Menu</div>}
+            {NAV.map(n => {
+              const active = page===n.id || (page==='mockSetup'&&n.id==='mock') || (page==='results'&&n.id==='mock')
+              return (
+                <button key={n.id} onClick={()=>onNav(n.id)} style={{
+                  width:'100%', display:'flex', alignItems:'center',
+                  gap:10, padding:collapsed?'10px 0':'9px 12px',
+                  justifyContent:collapsed?'center':'flex-start',
+                  background:active?'#FF6B0012':'none',
+                  border:`1px solid ${active?'#FF6B0030':'transparent'}`,
+                  borderRadius:8, marginBottom:2,
+                  color:active?'var(--orange)':'var(--muted)',
+                  fontSize:13, fontWeight:active?600:400,
+                  transition:'all 0.12s', whiteSpace:'nowrap',
+                }}
+                onMouseEnter={e=>{if(!active){e.currentTarget.style.color='var(--text)';e.currentTarget.style.background='#ffffff06'}}}
+                onMouseLeave={e=>{if(!active){e.currentTarget.style.color='var(--muted)';e.currentTarget.style.background='none'}}}
+                >
+                  <span style={{ fontSize:15, flexShrink:0 }}>{n.icon}</span>
+                  {!collapsed && <span>{n.label}</span>}
+                </button>
+              )
+            })}
+          </nav>
+
+          {/* Divider */}
+          <div style={{ height:'1px', background:'var(--border)', margin:'4px 12px' }}/>
+
+          {/* Courses */}
+          <div style={{ padding:'10px 8px' }}>
+            {!collapsed && <div style={{ fontSize:9, color:'var(--dim)', letterSpacing:2, padding:'6px 8px 4px', textTransform:'uppercase' }}>Courses</div>}
+            {COURSES.map(c => (
+              <div key={c.id} title={c.soon?`${c.label} — Coming Soon`:''}
+                style={{
+                  display:'flex', alignItems:'center',
+                  gap:10, padding:collapsed?'9px 0':'8px 12px',
+                  justifyContent:collapsed?'center':'flex-start',
+                  borderRadius:8, marginBottom:2,
+                  color:c.active?'var(--orange)':c.soon?'var(--dim)':'var(--muted)',
+                  background:c.active?'#FF6B0010':'none',
+                  border:`1px solid ${c.active?'#FF6B0025':'transparent'}`,
+                  cursor:c.soon?'not-allowed':'pointer',
+                  fontSize:13, fontWeight:c.active?600:400,
+                  position:'relative',
+                }}
+              >
+                <span style={{ fontSize:14, flexShrink:0, opacity:c.soon?0.5:1 }}>{c.icon}</span>
+                {!collapsed && (
+                  <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', flex:1, minWidth:0 }}>
+                    <span style={{ opacity:c.soon?0.45:1, overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>{c.label}</span>
+                    {c.soon && (
+                      <span style={{ fontSize:8, background:'#ffffff0a', border:'1px solid var(--border)', color:'var(--dim)', borderRadius:3, padding:'1px 5px', flexShrink:0, marginLeft:6, letterSpacing:0.5 }}>SOON</span>
+                    )}
+                    {c.active && (
+                      <span style={{ width:6, height:6, borderRadius:'50%', background:'var(--green)', flexShrink:0, marginLeft:6 }}/>
+                    )}
+                  </div>
+                )}
+              </div>
+            ))}
+          </div>
+        </div>
+
+        {/* User card */}
+        <div style={{ padding:collapsed?'14px 0':'14px 20px', borderTop:'1px solid var(--border)', textAlign:collapsed?'center':'left' }}>
           {collapsed
             ? <div style={{ fontSize:16, color:'var(--orange)' }}>◉</div>
             : <>
-                <div style={{ fontSize:10, color:'var(--dim)', marginBottom:4, letterSpacing:1 }}>LOGGED IN AS</div>
+                <div style={{ fontSize:10, color:'var(--dim)', marginBottom:4, letterSpacing:1 }}>SIGNED IN</div>
                 <div style={{ fontSize:12, fontWeight:600, color:'var(--text)', overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>{user?.name}</div>
                 <div style={{ fontSize:10, color:'var(--dim)', marginTop:2 }}>Free forever ✦</div>
               </>
