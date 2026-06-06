@@ -5,6 +5,7 @@ const tag = col => ({ background:col+'18', border:`1px solid ${col}30`, color:co
 
 export default function Results({ user, results, history, onNewMock, onProgress }) {
   const { c, w, s, score, max, pct, wQs, cm } = results
+  const qs = results.qs || []
   const scoreCol = pct>=60?'var(--green)':pct>=40?'var(--gold)':'var(--pink)'
   const pred = predictAIR(score)
   const prev = history.slice(0,-1)
@@ -82,6 +83,113 @@ export default function Results({ user, results, history, onNewMock, onProgress 
           })}
         </div>
       </div>
+
+
+      {/* ── TIME ANALYTICS ── */}
+      {results.timeMap && Object.keys(results.timeMap).length > 0 && (() => {
+        const tm = results.timeMap
+        const totalUsed = Object.values(tm).reduce((a,b)=>a+b,0)
+        const totalAllowed = results.rec?.n ? results.rec.n * 72 : 12000
+        const avgPerQ = totalUsed > 0 ? Math.round(totalUsed / Object.keys(tm).length) : 0
+
+        // Per-subject averages
+        const subTime = {}
+        qs.forEach((q, i) => {
+          const s = q.subject
+          if (!subTime[s]) subTime[s] = { total:0, count:0 }
+          subTime[s].total += tm[i] || 0
+          subTime[s].count += 1
+        })
+
+        // Slowest 5 questions
+        const slowest = Object.entries(tm)
+          .sort((a,b) => b[1]-a[1])
+          .slice(0,5)
+          .map(([i,t]) => ({ idx:+i, t, q:qs[+i] }))
+          .filter(x => x.q)
+
+        const fmtT = s => s >= 60 ? `${Math.floor(s/60)}m ${s%60}s` : `${s}s`
+        const pct = Math.min(100, Math.round(totalUsed/totalAllowed*100))
+
+        return (
+          <div style={{ background:'var(--card)', border:'1px solid var(--border)', borderRadius:12, padding:'24px', marginBottom:20 }}>
+            <div style={{ fontSize:10, color:'var(--dim)', letterSpacing:2, marginBottom:20 }}>TIME ANALYTICS</div>
+
+            {/* Top row */}
+            <div style={{ display:'grid', gridTemplateColumns:'repeat(3,1fr)', gap:12, marginBottom:20 }}>
+              {[
+                { v:fmtT(totalUsed), l:'Total Time Used',    c:'var(--orange)' },
+                { v:fmtT(avgPerQ),   l:'Avg per Question',   c:avgPerQ>90?'var(--pink)':avgPerQ>60?'var(--gold)':'var(--green)' },
+                { v:pct+'%',         l:'Time Used of Allotted', c:pct>90?'var(--pink)':pct>70?'var(--gold)':'var(--green)' },
+              ].map(s=>(
+                <div key={s.l} style={{ background:'var(--surface)', borderRadius:10, padding:'14px 16px' }}>
+                  <div style={{ fontSize:20, fontWeight:800, color:s.c, fontFamily:'var(--mono)' }}>{s.v}</div>
+                  <div style={{ fontSize:11, color:'var(--muted)', marginTop:4 }}>{s.l}</div>
+                </div>
+              ))}
+            </div>
+
+            {/* Time per subject */}
+            <div style={{ marginBottom:20 }}>
+              <div style={{ fontSize:11, color:'var(--dim)', marginBottom:10 }}>Avg time per question by subject</div>
+              <div style={{ display:'flex', flexDirection:'column', gap:8 }}>
+                {Object.entries(subTime).filter(([,d])=>d.count>0).map(([subj,d])=>{
+                  const avg = Math.round(d.total/d.count)
+                  const ideal = 72 // 72s per Q ideal for NEET
+                  const col = avg > ideal*1.4 ? 'var(--pink)' : avg > ideal ? 'var(--gold)' : 'var(--green)'
+                  const barW = Math.min(100, Math.round(avg/180*100))
+                  return (
+                    <div key={subj}>
+                      <div style={{ display:'flex', justifyContent:'space-between', marginBottom:4 }}>
+                        <span style={{ fontSize:12, color:'var(--text)' }}>{subj}</span>
+                        <span style={{ fontSize:12, color:col, fontFamily:'var(--mono)', fontWeight:600 }}>{fmtT(avg)} / question</span>
+                      </div>
+                      <div style={{ height:4, background:'var(--border)', borderRadius:2 }}>
+                        <div style={{ height:4, width:`${barW}%`, background:col, borderRadius:2, transition:'width 0.4s' }}/>
+                      </div>
+                    </div>
+                  )
+                })}
+              </div>
+              <div style={{ fontSize:10, color:'var(--dim)', marginTop:8 }}>Ideal: ~72 sec/question for NEET</div>
+            </div>
+
+            {/* Question time heatmap */}
+            {Object.keys(tm).length > 0 && (
+              <div>
+                <div style={{ fontSize:11, color:'var(--dim)', marginBottom:8 }}>Time per question (green &lt;60s · orange 60–120s · red &gt;2min)</div>
+                <div style={{ display:'flex', flexWrap:'wrap', gap:3 }}>
+                  {qs.map((q,i)=>{
+                    const t = tm[i] || 0
+                    const col = t===0?'var(--dim)':t<60?'var(--green)':t<120?'var(--gold)':'var(--pink)'
+                    return (
+                      <div key={i} title={`Q${i+1}: ${fmtT(t)}`}
+                        style={{ width:18, height:18, borderRadius:3, background:col+'30', border:`1px solid ${col}60`, cursor:'default' }}
+                      />
+                    )
+                  })}
+                </div>
+              </div>
+            )}
+
+            {/* Slowest questions */}
+            {slowest.length > 0 && (
+              <div style={{ marginTop:20 }}>
+                <div style={{ fontSize:11, color:'var(--dim)', marginBottom:10 }}>Slowest questions — review these</div>
+                {slowest.map(({idx,t,q})=>(
+                  <div key={idx} style={{ display:'flex', justifyContent:'space-between', alignItems:'center', padding:'7px 0', borderBottom:'1px solid var(--border)', fontSize:12 }}>
+                    <div style={{ display:'flex', gap:8, alignItems:'center', flex:1, minWidth:0 }}>
+                      <span style={{ color:'var(--dim)', fontFamily:'var(--mono)', flexShrink:0 }}>Q{idx+1}</span>
+                      <span style={{ color:'var(--muted)', overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>{q.question?.slice(0,60)}…</span>
+                    </div>
+                    <span style={{ color:'var(--pink)', fontFamily:'var(--mono)', fontWeight:600, flexShrink:0, marginLeft:12 }}>{fmtT(t)}</span>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        )
+      })()}
 
       {/* Chapter accuracy */}
       {Object.keys(cm).length>0 && (
