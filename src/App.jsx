@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react'
+import { Analytics } from '@vercel/analytics/react'
 import Layout from './components/Layout.jsx'
 import Landing from './pages/Landing.jsx'
 import Home from './pages/Home.jsx'
@@ -47,16 +48,22 @@ export default function App() {
 
   // Landing — no sidebar
   if(page==='landing') return (
-    <Landing onEnter={u => { setUser(u); nav('home') }}/>
+    <>
+      <Landing onEnter={u => { setUser(u); nav('home') }}/>
+      <Analytics />
+    </>
   )
 
   // Exam — fullscreen, no sidebar
   if(page==='exam') return (
-    <Exam
-      user={user} examData={examData||null} resumeInfo={resumeInfo}
-      onFinish={(r,newH,newW) => { setResults(r); setHistory(newH); setWeakness(newW); setResumeInfo(null); nav('results') }}
-      onHome={() => nav('home')}
-    />
+    <>
+      <Exam
+        user={user} examData={examData||null} resumeInfo={resumeInfo}
+        onFinish={(r,newH,newW) => { setResults(r); setHistory(newH); setWeakness(newW); setResumeInfo(null); nav('results') }}
+        onHome={() => nav('home')}
+      />
+      <Analytics />
+    </>
   )
 
   // All other pages — sidebar layout
@@ -94,6 +101,7 @@ export default function App() {
         />
       )}
       {page==='pyq' && <PYQBank/>}
+      <Analytics />
     </Layout>
   )
 }
