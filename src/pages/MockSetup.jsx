@@ -30,7 +30,7 @@ export default function MockSetup({ user, initialCfg, onStart, onBack }) {
   }
 
   return (
-    <div style={{ padding:'32px 36px', maxWidth:640, margin:'0 auto' }}>
+    <div className="page-in" style={{ padding:'32px 36px', maxWidth:640, margin:'0 auto' }}>
       <style>{`button:hover{filter:brightness(1.12)}`}</style>
 
       {/* Breadcrumb */}
