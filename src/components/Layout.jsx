@@ -1,3 +1,4 @@
+import { LiquidBadge } from './LiquidBlock.jsx'
 import { useState } from 'react'
 
 const NAV = [
@@ -23,10 +24,9 @@ export default function Layout({ page, onNav, user, children }) {
     <div style={{ display:'flex', minHeight:'100vh', background:'var(--bg)' }}>
 
       {/* ── SIDEBAR ── */}
-      <aside style={{
+      <aside className="sidebar" style={{
         width: collapsed ? 64 : 230,
-        minHeight:'100vh', background:'var(--surface)',
-        borderRight:'1px solid var(--border)',
+        minHeight:'100vh',
         display:'flex', flexDirection:'column',
         transition:'width 0.2s ease', flexShrink:0,
         position:'sticky', top:0, height:'100vh', overflow:'hidden',
@@ -100,7 +100,7 @@ export default function Layout({ page, onNav, user, children }) {
                   <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', flex:1, minWidth:0 }}>
                     <span style={{ opacity:c.soon?0.45:1, overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>{c.label}</span>
                     {c.soon && (
-                      <span style={{ fontSize:8, background:'#ffffff0a', border:'1px solid var(--border)', color:'var(--dim)', borderRadius:3, padding:'1px 5px', flexShrink:0, marginLeft:6, letterSpacing:0.5 }}>SOON</span>
+                      <LiquidBadge style={{ marginLeft:6 }}>SOON</LiquidBadge>
                     )}
                     {c.active && (
                       <span style={{ width:6, height:6, borderRadius:'50%', background:'var(--green)', flexShrink:0, marginLeft:6 }}/>
