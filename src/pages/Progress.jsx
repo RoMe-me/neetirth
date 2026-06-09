@@ -60,7 +60,7 @@ export default function Progress({ user, history, weakness, onBack, onClear }) {
   const tabs = ['overview','chapters','history']
 
   if (history.length===0) return (
-    <div style={{ padding:'32px 36px', maxWidth:700, margin:'0 auto' }}>
+    <div className="page-in" style={{ padding:'32px 36px', maxWidth:700, margin:'0 auto' }}>
       <div style={{ fontSize:22, fontWeight:700, marginBottom:8 }}>Progress</div>
       <div style={{ fontSize:13, color:'var(--muted)', marginBottom:32 }}>Track your journey to NEET 2027</div>
       <div style={{ background:'var(--card)', border:'1px solid var(--border)', borderRadius:16, padding:'60px', textAlign:'center' }}>
