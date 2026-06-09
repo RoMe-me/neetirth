@@ -29,7 +29,7 @@ export default function PYQBank() {
   const diffCol = d => d==='hard'?'var(--pink)':d==='medium'?'var(--gold)':'var(--green)'
 
   return (
-    <div style={{ padding:'32px 36px', maxWidth:900, margin:'0 auto' }}>
+    <div className="page-in" style={{ padding:'32px 36px', maxWidth:900, margin:'0 auto' }}>
       <style>{`button:hover{filter:brightness(1.1)} input::placeholder{color:var(--dim)}`}</style>
 
       {/* Header */}
