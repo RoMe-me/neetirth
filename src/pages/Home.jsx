@@ -1,3 +1,4 @@
+import { LiquidStat, LiquidTag } from '../components/LiquidBlock.jsx'
 import { useState } from 'react'
 import { predictAIR, getCollegeTierTargets } from '../lib/airPredictor.js'
 import { SC, ICONS, PYQ } from '../data/pyqBank.js'
@@ -98,7 +99,7 @@ export default function Home({ user, history, weakness, resumeInfo, onStartMock,
   const weakTop= Object.entries(weakness).filter(([,d])=>d.t>=3&&d.c/d.t<0.5).sort((a,b)=>a[1].c/a[1].t-b[1].c/b[1].t).slice(0,3)
 
   return (
-    <div style={{ padding:'32px 36px', maxWidth:960, margin:'0 auto' }}>
+    <div className="page-in" style={{ padding:'32px 36px', maxWidth:960, margin:'0 auto' }}>
       <style>{`button:hover{filter:brightness(1.12)}`}</style>
 
       {/* Header */}
@@ -150,9 +151,9 @@ export default function Home({ user, history, weakness, resumeInfo, onStartMock,
           <div style={{ fontSize:16, fontWeight:700, color:'var(--orange)', marginBottom:4 }}>Full NEET Mock — 720 Marks</div>
           <div style={{ fontSize:12, color:'var(--muted)', marginBottom:10 }}>180 Questions · Physics 45 · Chemistry 45 · Biology 90 · 3hr 20min</div>
           <div style={{ display:'flex', gap:8 }}>
-            {[['⚡ Physics','var(--blue)'],['⚗️ Chemistry','var(--orange)'],['🧬 Biology','var(--pink)']].map(([l,c])=>(
-              <span key={l} style={tag(c)}>{l}</span>
-            ))}
+            <LiquidTag color="var(--blue)">⚡ Physics</LiquidTag>
+            <LiquidTag color="var(--orange)">⚗️ Chemistry</LiquidTag>
+            <LiquidTag color="var(--pink)">🧬 Biology</LiquidTag>
           </div>
         </div>
         <div style={{ fontSize:30, color:'var(--orange)', fontWeight:300 }}>→</div>
