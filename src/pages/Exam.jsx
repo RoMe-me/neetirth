@@ -1,11 +1,12 @@
+import LiquidBlock from '../components/LiquidBlock.jsx'
 import { useState, useEffect, useRef } from 'react'
 import { saveResume, clearResume, updateWeakness, getHistory, saveHistory, getResume } from '../lib/storage.js'
 import { SC } from '../data/pyqBank.js'
 
 const T = {
-  bg:'#0A0A0F', card:{ background:'#0F0F1A', border:'1px solid #1E1E30', borderRadius:10, padding:16 },
-  orange:'#FF6B00', blue:'#4D9FFF', pink:'#FF5588', green:'#00E5AA',
-  text:'#E8E8F0', muted:'#606080', dim:'#404060',
+  bg:'var(--bg)', card:{ background:'var(--card)', border:'1px solid var(--border)', borderRadius:10, padding:16 },
+  orange:'var(--orange)', blue:'var(--blue)', pink:'var(--pink)', green:'var(--green)',
+  text:'var(--text)', muted:'var(--muted)', dim:'var(--dim)',
 }
 const btn = (col='#FF6B00', full=false) => ({
   background:col+'18', border:`1px solid ${col}55`, color:col,
@@ -142,18 +143,25 @@ export default function Exam({ user, examData, resumeInfo, onFinish, onHome }) {
   ].filter(s => s.start < qs.length) : []
 
   return (
-    <div style={{ height:'100vh', display:'grid', gridTemplateRows:'52px 1fr 50px', background:T.bg, color:T.text, fontFamily:"'Segoe UI',system-ui,sans-serif", overflow:'hidden' }}>
+    <div className="page-in" style={{ height:'100vh', display:'grid', gridTemplateRows:'52px 1fr 50px', background:'var(--bg)', color:T.text, fontFamily:"'Segoe UI',system-ui,sans-serif", overflow:'hidden' }}>
       <style>{`*{box-sizing:border-box} button:hover{filter:brightness(1.2)} ::-webkit-scrollbar{width:4px} ::-webkit-scrollbar-thumb{background:#2A2A40}`}</style>
 
       {/* ── TOP BAR ── */}
       <div style={{ background:'#0F0F1A', borderBottom:'1px solid #1E1E30', padding:'0 20px', display:'flex', alignItems:'center', justifyContent:'space-between' }}>
         <div style={{ display:'flex', alignItems:'center', gap:12 }}>
-          <div style={{
-            color: paused ? '#FFAA00' : timeLeft < 300 ? T.pink : T.green,
-            fontSize:20, fontWeight:800, fontFamily:'monospace', minWidth:100
-          }}>
-            {paused ? '⏸ PAUSED' : fmt(timeLeft)}
-          </div>
+          <LiquidBlock
+            fillColor={paused?'rgba(255,170,0,0.18)':timeLeft<300?'rgba(255,60,60,0.20)':'rgba(0,229,170,0.18)'}
+            fillHeight={Math.max(5, Math.round(timeLeft / (cfg?.isFull ? 12000 : qs.length*72) * 70))}
+            ripple={false}
+            style={{ padding:'6px 14px', minWidth:100, borderRadius:10 }}
+          >
+            <div style={{
+              color: paused ? '#FFAA00' : timeLeft<300 ? 'var(--pink)' : 'var(--green)',
+              fontSize:20, fontWeight:800, fontFamily:'var(--mono)'
+            }}>
+              {paused ? '⏸ PAUSED' : fmt(timeLeft)}
+            </div>
+          </LiquidBlock>
           <button onClick={() => { if(paused) qStartTime.current = Date.now(); setPaused(p => !p) }} style={{ ...btn(paused?'#FFAA00':'#505070'), padding:'5px 12px', fontSize:12 }}>
             {paused ? '▶ Resume' : '⏸ Pause'}
           </button>
