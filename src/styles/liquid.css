@@ -1,0 +1,117 @@
+/* ═══════════════════════════════════════════════════════════════
+   NEETIRTH — LIQUID GLASS DESIGN SYSTEM v2
+   Apple Liquid Glass inspired. Grey palette. Spring motion.
+   ═══════════════════════════════════════════════════════════════ */
+:root {
+  --bg:       #111111;
+  --surface:  #1C1C1E;
+  --card:     #242428;
+  --border:   rgba(255,255,255,0.09);
+  --border2:  rgba(255,255,255,0.16);
+  --glass-bg: rgba(255,255,255,0.055);
+  --glass-bg2:rgba(255,255,255,0.09);
+  --glass-glow:rgba(255,255,255,0.12);
+  --text:     #F2F2F7;
+  --muted:    #8E8E93;
+  --dim:      #48484A;
+  --orange:   #FF6B00;
+  --blue:     #4D9FFF;
+  --pink:     #FF4D8D;
+  --green:    #00E5AA;
+  --gold:     #FFB830;
+  --liq-orange:rgba(255,107,  0,0.20);
+  --liq-blue: rgba( 77,159,255,0.20);
+  --liq-pink: rgba(255, 77,141,0.20);
+  --liq-green:rgba(  0,229,170,0.20);
+  --liq-gold: rgba(255,184, 48,0.20);
+  --liq-white:rgba(255,255,255,0.07);
+  --spring:   cubic-bezier(0.34,1.56,0.64,1);
+  --eout:     cubic-bezier(0.22,1,0.36,1);
+  --font:     'Outfit',sans-serif;
+  --mono:     'DM Mono',monospace;
+}
+
+/* Glass surface */
+.glass {
+  background:var(--glass-bg);
+  backdrop-filter:blur(20px) saturate(180%);
+  -webkit-backdrop-filter:blur(20px) saturate(180%);
+  border:1px solid var(--border);
+  box-shadow:inset 0 1px 0 var(--glass-glow),0 4px 24px rgba(0,0,0,.35);
+  border-radius:14px;
+  position:relative;
+  overflow:hidden;
+}
+.glass::after {
+  content:'';position:absolute;inset:0;pointer-events:none;z-index:0;
+  background:url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='4'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.025'/%3E%3C/svg%3E");
+  border-radius:inherit;opacity:0.025;
+}
+.glass>*{position:relative;z-index:1;}
+
+/* Liquid ambient breathe */
+@keyframes breathe {
+  0%  {border-radius:52% 48% 0 0/28% 28% 0 0;transform:translateY(0);}
+  33% {border-radius:46% 54% 0 0/32% 26% 0 0;transform:translateY(-2px);}
+  66% {border-radius:54% 46% 0 0/26% 32% 0 0;transform:translateY(-1px);}
+  100%{border-radius:52% 48% 0 0/28% 28% 0 0;transform:translateY(0);}
+}
+
+/* Liquid slosh on click */
+@keyframes slosh {
+  0%  {transform:translateX(0)    rotate(0deg);   border-radius:52% 48% 0 0/28% 28% 0 0;}
+  15% {transform:translateX(-8px) rotate(-2deg);  border-radius:62% 38% 0 0/35% 22% 0 0;}
+  30% {transform:translateX( 8px) rotate( 2deg);  border-radius:38% 62% 0 0/22% 35% 0 0;}
+  50% {transform:translateX(-4px) rotate(-1deg);  border-radius:54% 46% 0 0/30% 26% 0 0;}
+  68% {transform:translateX( 3px) rotate(0.6deg); border-radius:48% 52% 0 0/26% 30% 0 0;}
+  84% {transform:translateX(-1px) rotate(-0.2deg);border-radius:51% 49% 0 0/28% 28% 0 0;}
+  100%{transform:translateX(0)    rotate(0deg);   border-radius:52% 48% 0 0/28% 28% 0 0;}
+}
+
+/* Click ripple */
+@keyframes ripple-out {
+  0%  {transform:scale(0);  opacity:0.35;}
+  70% {transform:scale(2.8);opacity:0.12;}
+  100%{transform:scale(4);  opacity:0;}
+}
+.ripple-dot {
+  position:absolute;width:60px;height:60px;
+  margin:-30px 0 0 -30px;border-radius:50%;
+  background:rgba(255,255,255,0.22);
+  animation:ripple-out 580ms var(--eout) forwards;
+  pointer-events:none;
+}
+
+/* Button spring press */
+@keyframes btn-press {
+  0%  {transform:scale(1);}
+  30% {transform:scale(0.95);}
+  65% {transform:scale(1.025);}
+  100%{transform:scale(1);}
+}
+
+/* Page enter */
+@keyframes pg-enter {
+  from{opacity:0;filter:blur(6px);transform:scale(0.985);}
+  to  {opacity:1;filter:blur(0);  transform:scale(1);}
+}
+.page-in{animation:pg-enter 200ms var(--eout) forwards;}
+
+/* Glass hover lift */
+.glass-card {
+  transition:transform 0.22s var(--spring),box-shadow 0.22s var(--eout),border-color 0.18s,background 0.18s;
+}
+.glass-card:hover {
+  transform:translateY(-1px) scale(1.007);
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.18),0 8px 32px rgba(0,0,0,.45);
+  background:var(--glass-bg2);
+}
+
+/* Sidebar glass */
+.sidebar {
+  background:rgba(18,18,20,0.88);
+  backdrop-filter:blur(24px) saturate(160%);
+  -webkit-backdrop-filter:blur(24px) saturate(160%);
+  border-right:1px solid var(--border);
+  box-shadow:inset -1px 0 0 var(--glass-glow);
+}
