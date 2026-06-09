@@ -14,7 +14,7 @@ export default function Results({ user, results, history, onNewMock, onProgress 
   Object.entries(cm).forEach(([,d])=>{ if(subBreak[d.sub]){subBreak[d.sub].c+=d.c;subBreak[d.sub].t+=d.t} })
 
   return (
-    <div style={{ padding:'32px 36px', maxWidth:820, margin:'0 auto' }}>
+    <div className="page-in" style={{ padding:'32px 36px', maxWidth:820, margin:'0 auto' }}>
       <style>{`button:hover{filter:brightness(1.12)}`}</style>
 
       {/* Top actions */}
