@@ -23,14 +23,34 @@ export default function LiquidBlock({
   const fillRef = useRef(null)
   const containerRef = useRef(null)
 
+  const handlePointerMove = useCallback((e) => {
+    const card = containerRef.current
+    if (!card) return
+    const rect = card.getBoundingClientRect()
+    const x = e.clientX - rect.left
+    const y = e.clientY - rect.top
+    card.style.setProperty('--mx', `${x}px`)
+    card.style.setProperty('--my', `${y}px`)
+    card.style.setProperty('--tilt-x', `${((y / rect.height) - 0.5) * -4}deg`)
+    card.style.setProperty('--tilt-y', `${((x / rect.width) - 0.5) * 4}deg`)
+  }, [])
+
+  const handlePointerLeave = useCallback(() => {
+    const card = containerRef.current
+    if (!card) return
+    card.style.setProperty('--mx', '50%')
+    card.style.setProperty('--my', '0%')
+    card.style.setProperty('--tilt-x', '0deg')
+    card.style.setProperty('--tilt-y', '0deg')
+  }, [])
+
   const handleClick = useCallback((e) => {
     // Slosh the liquid
     const fill = fillRef.current
     if (fill) {
-      fill.classList.remove('sloshing')
+      fill.style.animation = 'none'
       void fill.offsetWidth // reflow to restart animation
-      fill.classList.add('sloshing')
-      setTimeout(() => fill.classList.remove('sloshing'), 720)
+      fill.style.animation = 'slosh 720ms var(--spring), breathe 4.5s ease-in-out 720ms infinite'
     }
 
     // Ripple from click point
@@ -49,12 +69,15 @@ export default function LiquidBlock({
     <div
       ref={containerRef}
       onClick={handleClick}
+      onPointerMove={handlePointerMove}
+      onPointerLeave={handlePointerLeave}
       className={`glass glass-card ${className}`}
       style={{
         position: 'relative',
         overflow: 'hidden',
         cursor: 'default',
         userSelect: 'none',
+        transform: 'perspective(900px) translateY(var(--lift, 0px)) scale(var(--scale, 1)) rotateX(var(--tilt-x, 0deg)) rotateY(var(--tilt-y, 0deg))',
         ...style,
       }}
     >
@@ -74,12 +97,7 @@ export default function LiquidBlock({
           zIndex: 0,
           transition: 'height 1.2s var(--eout)',
         }}
-        onAnimationEnd={e => {
-          // keep breathing after slosh ends
-          if (e.animationName === 'slosh') {
-            e.target.style.animation = 'breathe 4.5s ease-in-out infinite'
-          }
-        }}
+        className="liquid-fill"
       />
       {/* Content above liquid */}
       <div style={{ position: 'relative', zIndex: 1 }}>

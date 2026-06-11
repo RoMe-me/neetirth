@@ -15,11 +15,17 @@ export default function Landing({ onEnter }) {
   }
 
   return (
-    <div style={{ minHeight:'100vh', background:'var(--bg)', display:'flex' }}>
-      <style>{`input::placeholder{color:var(--dim)} button:hover{filter:brightness(1.1)}`}</style>
+    <div className="app-shell" style={{ minHeight:'100vh', background:'var(--bg)', display:'flex', position:'relative', overflow:'hidden' }}>
+      <style>{`input::placeholder{color:var(--dim)} button:hover{filter:brightness(1.08)}`}</style>
+      <div className="liquid-aurora" aria-hidden="true">
+        <span className="liquid-orb one" />
+        <span className="liquid-orb two" />
+        <span className="liquid-orb three" />
+        <span className="liquid-grain" />
+      </div>
 
       {/* Left panel - branding */}
-      <div style={{ width:'45%', background:'var(--surface)', borderRight:'1px solid var(--border)', display:'flex', flexDirection:'column', justifyContent:'space-between', padding:'48px', position:'sticky', top:0, height:'100vh' }}>
+      <div className="glass" style={{ width:'45%', background:'rgba(18,18,22,0.58)', borderRight:'1px solid var(--border)', display:'flex', flexDirection:'column', justifyContent:'space-between', padding:'48px', position:'sticky', top:0, height:'100vh', borderRadius:0, zIndex:1 }}>
         <div>
           <div style={{ fontSize:22, fontWeight:800, color:'var(--orange)', letterSpacing:1 }}>नीतीर्थ</div>
           <div style={{ fontSize:10, color:'var(--dim)', letterSpacing:4, marginTop:2 }}>NEETIRTH</div>
@@ -50,8 +56,8 @@ export default function Landing({ onEnter }) {
       </div>
 
       {/* Right panel - entry */}
-      <div style={{ flex:1, display:'flex', alignItems:'center', justifyContent:'center', padding:'48px' }}>
-        <div style={{ width:'100%', maxWidth:380 }}>
+      <div style={{ flex:1, display:'flex', alignItems:'center', justifyContent:'center', padding:'48px', position:'relative', zIndex:1 }}>
+        <div className="glass glass-card page-in" style={{ width:'100%', maxWidth:430, padding:32, borderRadius:28 }}>
           <div style={{ fontSize:22, fontWeight:700, marginBottom:6 }}>Enter your name</div>
           <div style={{ fontSize:13, color:'var(--muted)', marginBottom:28, lineHeight:1.7 }}>
             No email. No password. Just your name — your progress is saved to your device.
@@ -63,13 +69,14 @@ export default function Landing({ onEnter }) {
             placeholder="e.g. Aryan_Dropper27"
             maxLength={30}
             autoFocus
-            style={{ width:'100%', background:'var(--card)', border:'1px solid var(--border)', borderRadius:10, padding:'14px 16px', fontSize:15, color:'var(--text)', outline:'none', marginBottom: err?8:20, fontFamily:'var(--font)', transition:'border-color 0.15s' }}
+            style={{ width:'100%', background:'rgba(255,255,255,0.075)', border:'1px solid var(--border)', borderRadius:16, padding:'15px 16px', fontSize:15, color:'var(--text)', outline:'none', marginBottom: err?8:20, fontFamily:'var(--font)', transition:'border-color 0.15s' }}
             onFocus={e=>e.target.style.borderColor='var(--orange)'}
             onBlur={e=>e.target.style.borderColor='var(--border)'}
           />
           {err && <div style={{ fontSize:12, color:'var(--pink)', marginBottom:16 }}>⚠ {err}</div>}
           <button onClick={enter} disabled={!name.trim()}
-            style={{ width:'100%', padding:'14px', background:name.trim()?'var(--orange)':'var(--border)', border:'none', borderRadius:10, color:name.trim()?'#fff':'var(--dim)', fontSize:15, fontWeight:700, letterSpacing:0.5, transition:'background 0.2s', cursor:name.trim()?'pointer':'default' }}>
+            className={name.trim() ? 'liquid-cta' : ''}
+            style={{ width:'100%', padding:'15px', background:name.trim()?'linear-gradient(135deg, var(--orange), #FF9B45)':'var(--border)', border:'1px solid rgba(255,255,255,.12)', borderRadius:16, color:name.trim()?'#fff':'var(--dim)', fontSize:15, fontWeight:800, letterSpacing:0.5, transition:'all 0.28s var(--spring)', cursor:name.trim()?'pointer':'default' }}>
             Begin →
           </button>
           <div style={{ fontSize:11, color:'var(--dim)', marginTop:20, textAlign:'center', lineHeight:1.8 }}>

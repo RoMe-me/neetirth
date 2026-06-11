@@ -21,15 +21,21 @@ export default function Layout({ page, onNav, user, children }) {
   const [collapsed, setCollapsed] = useState(false)
 
   return (
-    <div style={{ display:'flex', minHeight:'100vh', background:'var(--bg)' }}>
+    <div className="app-shell" style={{ display:'flex', minHeight:'100vh', background:'var(--bg)' }}>
+      <div className="liquid-aurora" aria-hidden="true">
+        <span className="liquid-orb one" />
+        <span className="liquid-orb two" />
+        <span className="liquid-orb three" />
+        <span className="liquid-grain" />
+      </div>
 
       {/* ── SIDEBAR ── */}
       <aside className="sidebar" style={{
         width: collapsed ? 64 : 230,
         minHeight:'100vh',
         display:'flex', flexDirection:'column',
-        transition:'width 0.2s ease', flexShrink:0,
-        position:'sticky', top:0, height:'100vh', overflow:'hidden',
+        transition:'width 0.42s var(--spring)', flexShrink:0,
+        position:'sticky', top:0, height:'100vh', overflow:'hidden', zIndex:2,
       }}>
 
         {/* Logo */}
@@ -53,7 +59,7 @@ export default function Layout({ page, onNav, user, children }) {
             {NAV.map(n => {
               const active = page===n.id || (page==='mockSetup'&&n.id==='mock') || (page==='results'&&n.id==='mock')
               return (
-                <button key={n.id} onClick={()=>onNav(n.id)} style={{
+                <button key={n.id} onClick={()=>onNav(n.id)} className={`nav-pill ${active ? 'active' : ''}`} style={{
                   width:'100%', display:'flex', alignItems:'center',
                   gap:10, padding:collapsed?'10px 0':'9px 12px',
                   justifyContent:collapsed?'center':'flex-start',
@@ -62,7 +68,7 @@ export default function Layout({ page, onNav, user, children }) {
                   borderRadius:8, marginBottom:2,
                   color:active?'var(--orange)':'var(--muted)',
                   fontSize:13, fontWeight:active?600:400,
-                  transition:'all 0.12s', whiteSpace:'nowrap',
+                  transition:'all 0.28s var(--spring)', whiteSpace:'nowrap',
                 }}
                 onMouseEnter={e=>{if(!active){e.currentTarget.style.color='var(--text)';e.currentTarget.style.background='#ffffff06'}}}
                 onMouseLeave={e=>{if(!active){e.currentTarget.style.color='var(--muted)';e.currentTarget.style.background='none'}}}
@@ -82,6 +88,7 @@ export default function Layout({ page, onNav, user, children }) {
             {!collapsed && <div style={{ fontSize:9, color:'var(--dim)', letterSpacing:2, padding:'6px 8px 4px', textTransform:'uppercase' }}>Courses</div>}
             {COURSES.map(c => (
               <div key={c.id} title={c.soon?`${c.label} — Coming Soon`:''}
+                className={`nav-pill ${c.active ? 'active' : ''}`}
                 style={{
                   display:'flex', alignItems:'center',
                   gap:10, padding:collapsed?'9px 0':'8px 12px',
@@ -93,6 +100,7 @@ export default function Layout({ page, onNav, user, children }) {
                   cursor:c.soon?'not-allowed':'pointer',
                   fontSize:13, fontWeight:c.active?600:400,
                   position:'relative',
+                  transition:'all 0.28s var(--spring)',
                 }}
               >
                 <span style={{ fontSize:14, flexShrink:0, opacity:c.soon?0.5:1 }}>{c.icon}</span>
@@ -113,7 +121,7 @@ export default function Layout({ page, onNav, user, children }) {
         </div>
 
         {/* User card */}
-        <div style={{ padding:collapsed?'14px 0':'14px 20px', borderTop:'1px solid var(--border)', textAlign:collapsed?'center':'left' }}>
+        <div className="glass" style={{ margin:collapsed?'10px 8px':'12px', padding:collapsed?'14px 0':'14px 16px', borderTop:'1px solid var(--border)', textAlign:collapsed?'center':'left', borderRadius:16 }}>
           {collapsed
             ? <div style={{ fontSize:16, color:'var(--orange)' }}>◉</div>
             : <>
@@ -126,7 +134,7 @@ export default function Layout({ page, onNav, user, children }) {
       </aside>
 
       {/* MAIN */}
-      <main style={{ flex:1, overflowY:'auto', minWidth:0 }}>
+      <main className="main-stage" style={{ flex:1, overflowY:'auto', minWidth:0 }}>
         {children}
       </main>
     </div>
