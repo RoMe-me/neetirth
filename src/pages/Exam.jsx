@@ -1,5 +1,5 @@
 import LiquidBlock from '../components/LiquidBlock.jsx'
-import { useState, useEffect, useRef } from 'react'
+import { useState, useEffect, useRef, useMemo } from 'react'
 import { saveResume, clearResume, updateWeakness, getHistory, saveHistory, getResume } from '../lib/storage.js'
 import { SC } from '../data/pyqBank.js'
 
@@ -151,7 +151,7 @@ export default function Exam({ user, examData, resumeInfo, onFinish, onHome }) {
         <div style={{ display:'flex', alignItems:'center', gap:12 }}>
           <LiquidBlock
             fillColor={paused?'rgba(255,170,0,0.18)':timeLeft<300?'rgba(255,60,60,0.20)':'rgba(0,229,170,0.18)'}
-            fillHeight={Math.max(5, Math.round(timeLeft / (cfg?.isFull ? 12000 : qs.length*72) * 70))}
+            fillHeight={useMemo(()=>Math.max(5,Math.round(timeLeft/(cfg?.isFull?12000:qs.length*72)*70)),[Math.floor(timeLeft/5),cfg?.isFull,qs.length])}
             ripple={false}
             style={{ padding:'6px 14px', minWidth:100, borderRadius:10 }}
           >
