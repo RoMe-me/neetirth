@@ -1,4 +1,4 @@
-import { useRef, useCallback } from 'react'
+import { useRef, useCallback, memo } from 'react'
 
 /**
  * LiquidBlock — non-clickable element with liquid fill inside.
@@ -12,7 +12,7 @@ import { useRef, useCallback } from 'react'
  *  children    node    content above the liquid
  *  ripple      bool    add click ripple (default true)
  */
-export default function LiquidBlock({
+const LiquidBlock = memo(function LiquidBlock({
   fillColor = 'var(--liq-white)',
   fillHeight = 40,
   style = {},
@@ -106,6 +106,9 @@ export default function LiquidBlock({
     </div>
   )
 }
+
+) // end memo
+export default LiquidBlock
 
 /* Convenience wrappers */
 export function LiquidStat({ value, label, color, fillPct, style={} }) {
