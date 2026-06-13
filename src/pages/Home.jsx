@@ -1,5 +1,5 @@
 import { LiquidStat, LiquidTag } from '../components/LiquidBlock.jsx'
-import { useState } from 'react'
+import { useState, useMemo, memo } from 'react'
 import { predictAIR, getCollegeTierTargets } from '../lib/airPredictor.js'
 import { SC, ICONS, PYQ } from '../data/pyqBank.js'
 
@@ -11,7 +11,7 @@ function getDailyQ() {
   return PYQ[day % PYQ.length]
 }
 
-function DailyQuestion() {
+const DailyQuestion = memo(function DailyQuestion() {
   const q = getDailyQ()
   const [selected, setSelected] = useState(null)
   const [revealed, setRevealed] = useState(false)
@@ -57,9 +57,9 @@ function DailyQuestion() {
       )}
     </div>
   )
-}
+}) // end DailyQuestion memo
 
-function TrendChart({ history }) {
+const TrendChart = memo(function TrendChart({ history }) {
   if (history.length < 2) return null
   const pts = history.slice(-8).map(m => Math.round(m.score/m.max*100))
   const W=280, H=56, mn=Math.min(...pts), mx=Math.max(...pts,mn+1)
@@ -88,7 +88,7 @@ function TrendChart({ history }) {
       </svg>
     </div>
   )
-}
+}) // end TrendChart memo
 
 export default function Home({ user, history, weakness, resumeInfo, onStartMock, onResume, onProgress, onPYQ }) {
   const totAns = Object.values(weakness).reduce((a,v)=>a+v.t,0)
