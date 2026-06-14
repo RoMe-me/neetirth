@@ -8,6 +8,7 @@ import Exam from './pages/Exam.jsx'
 import Results from './pages/Results.jsx'
 import Progress from './pages/Progress.jsx'
 import PYQBank from './pages/PYQBank.jsx'
+import Practice from './pages/Practice.jsx'
 import { getUser, getHistory, getWeakness, getResume } from './lib/storage.js'
 
 export default function App() {
@@ -36,6 +37,7 @@ export default function App() {
     if(id==='mock')     { setMockConfig(null); nav('mockSetup') }
     if(id==='progress') nav('progress')
     if(id==='pyq')      nav('pyq')
+    if(id==='practice') nav('practice')
   }
 
   // Loading
@@ -101,6 +103,7 @@ export default function App() {
         />
       )}
       {page==='pyq' && <PYQBank/>}
+      {page==='practice' && <Practice/>}
       <Analytics />
     </Layout>
   )
