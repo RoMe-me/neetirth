@@ -6,6 +6,7 @@ const NAV = [
   { id:'mock',     icon:'◎', label:'Mock Tests'  },
   { id:'progress', icon:'◈', label:'Progress'    },
   { id:'pyq',      icon:'◫', label:'PYQ Bank'    },
+  { id:'practice', icon:'✦', label:'Practice'     },
 ]
 
 const COURSES = [
@@ -57,7 +58,7 @@ export default function Layout({ page, onNav, user, children }) {
           <nav style={{ padding:'10px 8px' }}>
             {!collapsed && <div style={{ fontSize:9, color:'var(--dim)', letterSpacing:2, padding:'6px 8px 4px', textTransform:'uppercase' }}>Menu</div>}
             {NAV.map(n => {
-              const active = page===n.id || (page==='mockSetup'&&n.id==='mock') || (page==='results'&&n.id==='mock')
+              const active = page===n.id || (page==='mockSetup'&&n.id==='mock') || (page==='results'&&n.id==='mock') || (page==='practice'&&n.id==='practice')
               return (
                 <button key={n.id} onClick={()=>onNav(n.id)} className={`nav-pill ${active ? 'active' : ''}`} style={{
                   width:'100%', display:'flex', alignItems:'center',
