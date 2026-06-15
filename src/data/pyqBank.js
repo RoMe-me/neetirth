@@ -285,17 +285,21 @@ export const HIGH_YIELD = {
   Biology:["Molecular Basis of Inheritance","Principles of Inheritance & Variation","Biotechnology: Principles & Processes","Biotechnology & Its Applications","Animal Kingdom","Cell Cycle & Division","Human Health & Disease"]
 };
 
-export function getOfflineQs(subject=null, chapters=[], count=30) {
+export function getOfflineQs(subject=null, chapters=[], count=30, difficulty=null) {
   let pool = [...PYQ];
-  if (subject) pool = pool.filter(q => q.sub === subject);
+  if (subject)    pool = pool.filter(q => q.sub === subject);
   if (chapters.length > 0) {
     pool = pool.filter(q => chapters.includes(q.ch));
-    // NO silent fallback — if chapter has no questions, throw so user sees clear message
     if (pool.length === 0) {
       throw new Error(`No questions found for: ${chapters.join(', ')}. Try a different chapter.`);
     }
   }
-  if (pool.length === 0) throw new Error(`No questions found for ${subject}.`);
+  if (difficulty) pool = pool.filter(q => (q.d||q.diff) === difficulty);
+  if (pool.length === 0) throw new Error(`No questions found for ${subject||'this selection'}.`);
+  // Use balanced difficulty when no specific difficulty requested
+  if (!difficulty && pool.length >= count) {
+    return balancedPick(pool, Math.min(count, pool.length));
+  }
   return [...pool].sort(() => Math.random() - 0.5).slice(0, Math.min(count, pool.length));
 }
 
@@ -308,10 +312,26 @@ export function getChapterCounts(subject) {
   return counts;
 }
 
+// Balanced difficulty picker: matches real NEET distribution
+// Easy 30% | Medium 50% | Hard 20%
+function balancedPick(pool, total) {
+  const e = pool.filter(q=>(q.d||q.diff)==='easy').sort(()=>Math.random()-0.5);
+  const m = pool.filter(q=>(q.d||q.diff)==='medium').sort(()=>Math.random()-0.5);
+  const h = pool.filter(q=>(q.d||q.diff)==='hard').sort(()=>Math.random()-0.5);
+  const nE = Math.min(Math.round(total*0.30), e.length);
+  const nH = Math.min(Math.round(total*0.20), h.length);
+  const nM = Math.min(total - nE - nH, m.length);
+  const picked = [...e.slice(0,nE), ...m.slice(0,nM), ...h.slice(0,nH)];
+  // If we couldn't fill from hard/medium, top up with easy
+  const remaining = total - picked.length;
+  if (remaining > 0) picked.push(...pool.filter(q=>!picked.includes(q)).sort(()=>Math.random()-0.5).slice(0,remaining));
+  return picked.sort(()=>Math.random()-0.5);
+}
+
 export function getOfflineFull() {
-  const phy  = PYQ.filter(q=>q.sub==="Physics").sort(()=>Math.random()-0.5).slice(0,45);
-  const chem = PYQ.filter(q=>q.sub==="Chemistry").sort(()=>Math.random()-0.5).slice(0,45);
-  const bio  = PYQ.filter(q=>q.sub==="Biology").sort(()=>Math.random()-0.5).slice(0,90);
-  // NEET 2027 format: Physics 45 (180 marks) + Chemistry 45 (180 marks) + Biology 90 (360 marks) = 180Q / 720 marks
+  const phy  = balancedPick(PYQ.filter(q=>q.sub==="Physics"), 45);
+  const chem = balancedPick(PYQ.filter(q=>q.sub==="Chemistry"), 45);
+  const bio  = balancedPick(PYQ.filter(q=>q.sub==="Biology"), 90);
+  // NEET format: Physics 45 + Chemistry 45 + Biology 90 = 180Q / 720 marks
   return [...phy, ...chem, ...bio];
 }
