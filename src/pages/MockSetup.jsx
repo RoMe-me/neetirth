@@ -1,5 +1,6 @@
 import { useState } from 'react'
-import { CHAPTERS, SC, ICONS, getOfflineQs, getOfflineFull, getChapterCounts } from '../data/pyqBank.js'
+import { CHAPTERS, SC, ICONS, getOfflineFull } from '../data/pyqBank.js'
+import { getQuestions, getChapterCount, generateAndCache, getCacheStats } from '../data/questionEngine.js'
 
 const NEET_FORMAT = { Physics:45, Chemistry:45, Biology:90 }
 
@@ -15,18 +16,34 @@ export default function MockSetup({ user, initialCfg, onStart, onBack }) {
     id:q.id||i, question:q.question||q.q, options:q.options||q.o,
     correct:q.correct||q.a, explanation:q.explanation||q.e,
     chapter:q.chapter||q.ch, subject:q.subject||q.sub,
-    difficulty:q.difficulty||q.d||'medium', pyq:true, year:q.year||q.y||null
+    difficulty:q.difficulty||q.d||'medium', pyq:!!q.pyq, year:q.year||q.y||null
   })
 
   const startMock = async (cfg) => {
     setLoading(true); setErr('')
     try {
-      await new Promise(r=>setTimeout(r,200))
-      const raw = cfg.isFull ? getOfflineFull() : getOfflineQs(cfg.subject, cfg.chapters, cfg.qCount)
-      if (!raw.length) throw new Error('No questions found for this selection.')
+      await new Promise(r=>setTimeout(r,150))
+      let raw = []
+      if (cfg.isFull) {
+        raw = getOfflineFull()
+      } else {
+        // Use unified engine — combines PYQ + practice + AI cache
+        raw = getQuestions({ subject: cfg.subject, chapters: cfg.chapters||[], count: cfg.qCount })
+        // If still not enough, try to generate silently
+        if (raw.length < Math.min(5, cfg.qCount) && cfg.chapters?.length > 0) {
+          setLoadMsg('Generating questions for this chapter…')
+          for (const ch of cfg.chapters) {
+            try { await generateAndCache(ch, cfg.subject, 20) } catch {}
+          }
+          raw = getQuestions({ subject: cfg.subject, chapters: cfg.chapters, count: cfg.qCount })
+        }
+      }
+      if (!raw.length) throw new Error(
+        'No questions found. Visit the Practice page → Generate Questions for this chapter first.'
+      )
       onStart({ qs:raw.map(normalise), timeLimit:cfg.isFull?12000:raw.length*72, cfg, startedAt:new Date().toISOString() })
     } catch(e) { setErr(e.message) }
-    finally { setLoading(false) }
+    finally { setLoading(false); setLoadMsg('') }
   }
 
   return (
