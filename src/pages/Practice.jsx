@@ -34,20 +34,27 @@ function getCacheStats() {
 
 // ── AI generation via Vercel serverless ───────────────────────
 async function generateChapterQs(chapter, subject, count=25) {
-  const prompt = `Generate exactly ${count} NEET UG practice MCQs for the chapter "${chapter}" (${subject}).
-Rules:
-- NCERT-based only. NEET difficulty and style.
-- Mix: 40% easy, 40% medium, 20% hard.
-- Include 4-5 Assertion-Reasoning (type:"ar") questions.
-- For A-R questions use these 4 options exactly:
+  const prompt = `Generate exactly ${count} NEET UG practice questions for "${chapter}" (${subject}).
+
+Difficulty target (STRICT — match real NEET 2024 pattern):
+- 30% easy: direct NCERT fact recall, 1-step
+- 50% medium: application, 2-step reasoning, comparing concepts
+- 20% hard: multi-concept, exception-based, tricky elimination, or calculation
+
+Question types:
+- Include 4-5 Assertion-Reasoning (type:"ar") questions, rest MCQ
+- Hard questions must have clearly WRONG-looking correct answers (real NEET style traps)
+- Medium questions must need reasoning, not just recall
+- Avoid trivial "which is a semiconductor" type questions for medium/hard
+
+For A-R questions use EXACTLY these 4 options:
   A: "Both A and R correct, R explains A"
-  B: "Both A and R correct, R does not explain A"  
+  B: "Both A and R correct, R does not explain A"
   C: "A correct, R wrong"
   D: "A wrong"
-- Make questions unique and exam-worthy.
 
-Return ONLY a JSON array, no markdown, no explanation:
-[{"id":"g1","q":"question text","o":{"A":"","B":"","C":"","D":""},"a":"A","e":"explanation","ch":"${chapter}","sub":"${subject}","d":"easy","type":"mcq"}]`
+Return ONLY a JSON array, no markdown, no preamble:
+[{"id":"g1","q":"question text","o":{"A":"","B":"","C":"","D":""},"a":"A","e":"brief explanation max 2 lines","ch":"${chapter}","sub":"${subject}","d":"medium","type":"mcq"}]`
 
   const res = await fetch('/api/generate', {
     method: 'POST',
