@@ -1,93 +1,32 @@
-import { useState, memo, useCallback } from 'react'
-import { PRACTICE, getPracticeQs, getPracticeStats, searchPractice } from '../data/practiceBank.js'
+import { useState, memo, useCallback, useEffect } from 'react'
+import { PRACTICE, getPracticeStats, searchPractice } from '../data/practiceBank.js'
 import { CHAPTERS, SC, ICONS } from '../data/pyqBank.js'
-import LiquidBlock, { LiquidTag, LiquidBadge } from '../components/LiquidBlock.jsx'
+import LiquidBlock, { LiquidTag } from '../components/LiquidBlock.jsx'
+import {
+  getQuestions, generateAndCache, getCacheStats, clearCache,
+  getChapterAccuracy, getAdaptiveDifficulty, recordPerformance
+} from '../data/questionEngine.js'
 
 const diffCol = d => d==='hard'?'var(--pink)':d==='medium'?'var(--gold)':'var(--green)'
-const SUBJECTS = ['All','Chemistry','Physics','Biology']
-const DIFFS    = ['All','easy','medium','hard']
-const TYPES    = ['All','mcq','ar']
+const DIFFS   = ['auto','easy','medium','hard']
 
-// ── localStorage cache for AI-generated questions ──────────────
-const CACHE_KEY = 'neetirth_genq_'
-
-function getCached(chapter) {
-  try { const v = localStorage.getItem(CACHE_KEY + chapter); return v ? JSON.parse(v) : null } catch { return null }
-}
-function setCached(chapter, qs) {
-  try { localStorage.setItem(CACHE_KEY + chapter, JSON.stringify(qs)) } catch {}
-}
-function clearCache() {
-  try {
-    Object.keys(localStorage).filter(k => k.startsWith(CACHE_KEY)).forEach(k => localStorage.removeItem(k))
-  } catch {}
-}
-function getCacheStats() {
-  try {
-    const keys = Object.keys(localStorage).filter(k => k.startsWith(CACHE_KEY))
-    const total = keys.reduce((a, k) => {
-      try { return a + (JSON.parse(localStorage.getItem(k))||[]).length } catch { return a }
-    }, 0)
-    return { chapters: keys.length, total }
-  } catch { return { chapters: 0, total: 0 } }
-}
-
-// ── AI generation via Vercel serverless ───────────────────────
-async function generateChapterQs(chapter, subject, count=25) {
-  const prompt = `Generate exactly ${count} NEET UG practice questions for "${chapter}" (${subject}).
-
-Difficulty target (STRICT — match real NEET 2024 pattern):
-- 30% easy: direct NCERT fact recall, 1-step
-- 50% medium: application, 2-step reasoning, comparing concepts
-- 20% hard: multi-concept, exception-based, tricky elimination, or calculation
-
-Question types:
-- Include 4-5 Assertion-Reasoning (type:"ar") questions, rest MCQ
-- Hard questions must have clearly WRONG-looking correct answers (real NEET style traps)
-- Medium questions must need reasoning, not just recall
-- Avoid trivial "which is a semiconductor" type questions for medium/hard
-
-For A-R questions use EXACTLY these 4 options:
-  A: "Both A and R correct, R explains A"
-  B: "Both A and R correct, R does not explain A"
-  C: "A correct, R wrong"
-  D: "A wrong"
-
-Return ONLY a JSON array, no markdown, no preamble:
-[{"id":"g1","q":"question text","o":{"A":"","B":"","C":"","D":""},"a":"A","e":"brief explanation max 2 lines","ch":"${chapter}","sub":"${subject}","d":"medium","type":"mcq"}]`
-
-  const res = await fetch('/api/generate', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({
-      model: 'claude-sonnet-4-6',
-      max_tokens: 8000,
-      messages: [{ role: 'user', content: prompt }]
-    })
-  })
-  if (!res.ok) throw new Error('API error ' + res.status)
-  const data = await res.json()
-  const raw = data?.content?.[0]?.text || ''
-  const match = raw.match(/\[[\s\S]*\]/)
-  if (!match) throw new Error('No JSON array in response')
-  const parsed = JSON.parse(match[0])
-  // add unique IDs and timestamp
-  return parsed.map((q, i) => ({ ...q, id: `gen_${Date.now()}_${i}`, pyq: false }))
-}
-
-// ── Question card ──────────────────────────────────────────────
-const QuestionCard = memo(function QuestionCard({ q, idx }) {
+const QuestionCard = memo(function QuestionCard({ q, idx, onAnswered }) {
   const [sel,   setSel]   = useState(null)
   const [shown, setShown] = useState(false)
   const isAR = q.type === 'ar'
+
+  const check = () => {
+    setShown(true)
+    if (onAnswered) onAnswered(sel === q.a)
+  }
 
   return (
     <div className="glass glass-card" style={{ padding:'18px 22px', marginBottom:10 }}>
       <div style={{ display:'flex', gap:6, marginBottom:10, flexWrap:'wrap', alignItems:'center' }}>
         <LiquidTag color={SC[q.sub]||'#888'}>{ICONS[q.sub]} {q.sub}</LiquidTag>
-        <LiquidBlock fillColor={diffCol(q.d)+'28'} fillHeight={55}
-          style={{ display:'inline-flex', padding:'2px 8px', borderRadius:4, fontSize:10, fontWeight:600, color:diffCol(q.d) }}>
-          {q.d}
+        <LiquidBlock fillColor={diffCol(q.d||q.diff||'medium')+'28'} fillHeight={55}
+          style={{ display:'inline-flex', padding:'2px 8px', borderRadius:4, fontSize:10, fontWeight:600, color:diffCol(q.d||q.diff||'medium') }}>
+          {q.d||q.diff||'medium'}
         </LiquidBlock>
         {isAR && (
           <LiquidBlock fillColor="rgba(170,136,255,0.18)" fillHeight={55}
@@ -96,16 +35,13 @@ const QuestionCard = memo(function QuestionCard({ q, idx }) {
           </LiquidBlock>
         )}
         <span style={{ fontSize:10, color:'var(--dim)' }}>{q.ch}</span>
-        {!q.pyq && <span style={{ fontSize:9, color:'var(--dim)', background:'rgba(255,255,255,0.04)', border:'1px solid var(--border)', borderRadius:3, padding:'1px 5px' }}>AI</span>}
       </div>
-
       <div style={{ fontSize:13, color:'var(--text)', lineHeight:1.8, marginBottom:14, whiteSpace:'pre-line' }}>
         <span style={{ color:'var(--dim)', marginRight:6, fontFamily:'var(--mono)', fontSize:11 }}>Q{idx+1}.</span>{q.q}
       </div>
-
       <div style={{ display:'flex', flexDirection:'column', gap:6, marginBottom:12 }}>
         {['A','B','C','D'].map(opt => {
-          const correct = q.a === opt, isSel = sel === opt
+          const correct = (q.a||q.correct) === opt, isSel = sel === opt
           let bg='rgba(255,255,255,0.03)', border='var(--border)', col='var(--muted)'
           if (isSel && !shown)            { bg='rgba(255,107,0,0.10)';  border='rgba(255,107,0,0.40)';  col='var(--orange)' }
           if (shown && correct)           { bg='rgba(0,229,170,0.10)';  border='rgba(0,229,170,0.40)';  col='var(--green)'  }
@@ -114,116 +50,100 @@ const QuestionCard = memo(function QuestionCard({ q, idx }) {
             <div key={opt} onClick={() => { if (!shown) setSel(opt) }}
               style={{ display:'flex', gap:10, alignItems:'flex-start', padding:'9px 12px', borderRadius:8, background:bg, border:`1px solid ${border}`, cursor:shown?'default':'pointer', transition:'all 0.12s' }}>
               <span style={{ fontSize:11, fontWeight:700, color:col, fontFamily:'var(--mono)', flexShrink:0, marginTop:1 }}>{opt}</span>
-              <span style={{ fontSize:12, color:col, lineHeight:1.6 }}>{q.o[opt]}</span>
+              <span style={{ fontSize:12, color:col, lineHeight:1.6 }}>{(q.o||q.options)?.[opt]}</span>
             </div>
           )
         })}
       </div>
-
       {!shown ? (
-        <button onClick={() => setShown(true)} disabled={!sel}
+        <button onClick={check} disabled={!sel}
           style={{ background:sel?'var(--orange)':'var(--border)', border:'none', color:sel?'#fff':'var(--dim)', borderRadius:7, padding:'7px 18px', fontSize:12, fontWeight:600, cursor:sel?'pointer':'default', opacity:sel?1:0.5 }}>
           Check Answer
         </button>
       ) : (
-        <div style={{ background:'rgba(255,255,255,0.03)', borderRadius:8, padding:'10px 14px', fontSize:12, color:'var(--muted)', lineHeight:1.7, borderLeft:`3px solid ${sel===q.a?'var(--green)':'var(--pink)'}` }}>
-          {sel===q.a ? '✅ Correct — ' : `❌ Wrong (Ans: ${q.a}) — `}{q.e}
+        <div style={{ background:'rgba(255,255,255,0.03)', borderRadius:8, padding:'10px 14px', fontSize:12, color:'var(--muted)', lineHeight:1.7, borderLeft:`3px solid ${sel===(q.a||q.correct)?'var(--green)':'var(--pink)'}` }}>
+          {sel===(q.a||q.correct)?'✅ Correct — ':`❌ Wrong (Ans: ${q.a||q.correct}) — `}{q.e||q.explanation}
         </div>
       )}
     </div>
   )
 })
 
-// ── Main component ─────────────────────────────────────────────
 export default function Practice() {
-  const [tab,        setTab]        = useState('generate')
-  const [subject,    setSubject]    = useState('Chemistry')
-  const [chapter,    setChapter]    = useState('')
-  const [diff,       setDiff]       = useState('All')
-  const [type,       setType]       = useState('All')
-  const [count,      setCount]      = useState(20)
-  const [search,     setSearch]     = useState('')
-  const [qs,         setQs]         = useState([])
-  const [loading,    setLoading]    = useState(false)
-  const [loadMsg,    setLoadMsg]    = useState('')
-  const [cacheStats, setCacheStats] = useState(getCacheStats())
-  const [err,        setErr]        = useState('')
+  const [tab,      setTab]      = useState('chapters')
+  const [subject,  setSubject]  = useState('Chemistry')
+  const [chapter,  setChapter]  = useState('')
+  const [diff,     setDiff]     = useState('auto')
+  const [count,    setCount]    = useState(20)
+  const [search,   setSearch]   = useState('')
+  const [qs,       setQs]       = useState([])
+  const [loading,  setLoading]  = useState(false)
+  const [msg,      setMsg]      = useState('')
+  const [err,      setErr]      = useState('')
+  const [cStats,   setCStats]   = useState(getCacheStats())
+  const [answered, setAnswered] = useState({ c:0, t:0 })
 
-  const stats    = getPracticeStats()
-  const arQs     = PRACTICE.filter(q => q.type === 'ar')
-  const chapters = chapter ? [] : (subject && CHAPTERS[subject]
-    ? Object.values(CHAPTERS[subject].sections).flat()
-    : [])
-  const searchResults = search.length > 1 ? searchPractice(search, subject==='All'?null:subject) : []
+  const stats       = getPracticeStats()
+  const arQs        = PRACTICE.filter(q => q.type === 'ar')
+  const accuracy    = chapter ? getChapterAccuracy(chapter) : null
+  const adaptDiff   = chapter ? getAdaptiveDifficulty(chapter) : null
+  const searchRes   = search.length > 1 ? searchPractice(search, null) : []
 
-  const generateQs = useCallback(async () => {
-    if (!chapter) return setErr('Please select a chapter first.')
-    setErr(''); setLoading(true)
+  const handleAnswered = useCallback((correct) => {
+    setAnswered(prev => ({ c: prev.c + (correct?1:0), t: prev.t + 1 }))
+    if (chapter) recordPerformance(chapter, correct?1:0, 1)
+  }, [chapter])
 
-    // Check cache first
-    const cached = getCached(chapter)
-    if (cached && cached.length >= 10) {
-      setQs(cached.sort(() => Math.random() - 0.5))
-      setLoading(false)
-      setLoadMsg(`Loaded ${cached.length} cached questions for ${chapter}`)
-      return
-    }
-
-    // Generate fresh
-    setLoadMsg(`Generating ${count} questions for ${chapter}…`)
+  const loadQs = async () => {
+    if (!chapter) return setErr('Select a chapter first.')
+    setErr(''); setLoading(true); setAnswered({ c:0, t:0 })
     try {
-      const generated = await generateChapterQs(chapter, subject, count)
-      // Merge with any existing cached
-      const existing = getCached(chapter) || []
-      const merged = [...existing, ...generated]
-      setCached(chapter, merged)
-      setQs(merged.sort(() => Math.random() - 0.5))
-      setCacheStats(getCacheStats())
-      setLoadMsg(`Generated ${generated.length} questions! (${merged.length} total cached for ${chapter})`)
+      const selectedDiff = diff === 'auto' ? adaptDiff : diff
+      let result = getQuestions({ subject, chapters:[chapter], count,
+        difficulty: selectedDiff || null })
+      if (result.length < Math.min(5, count)) {
+        setMsg('Fetching more questions for this chapter…')
+        await generateAndCache(chapter, subject, 25)
+        setCStats(getCacheStats())
+        result = getQuestions({ subject, chapters:[chapter], count, difficulty: selectedDiff || null })
+      }
+      setQs(result); setMsg('')
     } catch(e) {
-      setErr('Generation failed: ' + e.message + '. Check if ANTHROPIC_API_KEY is set in Vercel.')
+      setMsg(''); setErr(e.message)
     }
     setLoading(false)
-  }, [chapter, subject, count])
-
-  const loadOffline = () => {
-    setErr('')
-    try {
-      const result = getPracticeQs({
-        subject: subject==='All' ? null : subject,
-        difficulty: diff==='All' ? null : diff,
-        type: type==='All' ? null : type,
-        count,
-      })
-      setQs(result)
-    } catch(e) { setErr(e.message) }
   }
 
-  const Btn = ({ active, col='var(--orange)', onClick, children, style={} }) => (
-    <button onClick={onClick} style={{ padding:'6px 12px', borderRadius:7, fontSize:12, fontWeight:active?600:400, background:active?col+'18':'rgba(255,255,255,0.04)', border:`1px solid ${active?col+'50':'var(--border)'}`, color:active?col:'var(--muted)', transition:'all 0.12s', cursor:'pointer', ...style }}>
+  const Btn = ({ active, col='var(--orange)', onClick, children }) => (
+    <button onClick={onClick} style={{ padding:'6px 12px', borderRadius:7, fontSize:12, fontWeight:active?600:400, background:active?col+'18':'rgba(255,255,255,0.04)', border:`1px solid ${active?col+'50':'var(--border)'}`, color:active?col:'var(--muted)', transition:'all 0.12s', cursor:'pointer', whiteSpace:'nowrap' }}>
       {children}
     </button>
   )
+
+  const diffLabel = d => {
+    if (d === 'auto') return adaptDiff ? `Auto (→ ${adaptDiff})` : 'Auto (balanced)'
+    return d.charAt(0).toUpperCase() + d.slice(1)
+  }
 
   return (
     <div className="page-in" style={{ padding:'32px 36px', maxWidth:880, margin:'0 auto' }}>
       <style>{`button:hover{filter:brightness(1.1)} input::placeholder{color:var(--dim)} select{font-family:var(--font)}`}</style>
 
-      {/* Header */}
+      {/* Header + slogan */}
       <div style={{ marginBottom:24 }}>
         <div style={{ fontSize:22, fontWeight:700, marginBottom:4 }}>Practice Questions</div>
-        <div style={{ fontSize:13, color:'var(--muted)' }}>
-          AI generates unlimited questions per chapter · Cached offline · Never repeats until you clear
+        <div style={{ fontSize:13, color:'var(--orange)', fontStyle:'italic' }}>
+          Questions get harder as you improve — your accuracy shapes every session.
         </div>
       </div>
 
-      {/* Stats row */}
+      {/* Stats */}
       <div style={{ display:'grid', gridTemplateColumns:'repeat(4,1fr)', gap:10, marginBottom:24 }}>
         {[
-          { v:stats.total,          l:'Hardcoded',        c:'var(--orange)' },
-          { v:cacheStats.total,     l:'AI Generated',     c:'var(--blue)'   },
-          { v:cacheStats.chapters,  l:'Chapters Cached',  c:'var(--green)'  },
-          { v:arQs.length,          l:'A-R Questions',    c:'#AA88FF'       },
+          { v:stats.total + cStats.total, l:'Total Available',    c:'var(--orange)' },
+          { v:cStats.total,               l:'AI Generated',       c:'var(--blue)'   },
+          { v:cStats.chapters,            l:'Chapters Unlocked',  c:'var(--green)'  },
+          { v:arQs.length,               l:'A-R Questions',      c:'#AA88FF'       },
         ].map(s => (
           <LiquidBlock key={s.l} fillColor={s.c+'22'} fillHeight={38} style={{ padding:'14px 18px' }}>
             <div style={{ fontSize:22, fontWeight:800, color:s.c, fontFamily:'var(--mono)' }}>{s.v}</div>
@@ -234,125 +154,105 @@ export default function Practice() {
 
       {/* Tabs */}
       <div style={{ display:'flex', gap:2, marginBottom:20, background:'rgba(255,255,255,0.04)', borderRadius:10, padding:4, width:'fit-content', border:'1px solid var(--border)' }}>
-        {[
-          ['generate','✦ Generate (AI)'],
-          ['offline',  '📚 Offline Bank'],
-          ['search',   '🔍 Search'],
-          ['ar',       'A-R Type'],
-        ].map(([id,label]) => (
+        {[['chapters','By Chapter'],['search','Search'],['ar','Assertion-Reasoning']].map(([id,label]) => (
           <button key={id} onClick={() => { setTab(id); setQs([]); setErr('') }}
-            style={{ padding:'7px 16px', borderRadius:7, fontSize:12, fontWeight:tab===id?600:400, background:tab===id?'var(--card)':'none', border:tab===id?'1px solid var(--border)':'1px solid transparent', color:tab===id?'var(--text)':'var(--muted)', cursor:'pointer', whiteSpace:'nowrap' }}>
+            style={{ padding:'7px 16px', borderRadius:7, fontSize:12, fontWeight:tab===id?600:400, background:tab===id?'var(--card)':'none', border:tab===id?'1px solid var(--border)':'1px solid transparent', color:tab===id?'var(--text)':'var(--muted)', cursor:'pointer' }}>
             {label}
           </button>
         ))}
       </div>
 
-      {err && (
-        <div style={{ background:'rgba(255,77,141,0.08)', border:'1px solid rgba(255,77,141,0.3)', borderRadius:8, padding:'10px 14px', marginBottom:16, fontSize:12, color:'var(--pink)' }}>
-          ⚠ {err}
-        </div>
-      )}
+      {err && <div style={{ background:'rgba(255,77,141,0.08)', border:'1px solid rgba(255,77,141,0.3)', borderRadius:8, padding:'10px 14px', marginBottom:16, fontSize:12, color:'var(--pink)' }}>⚠ {err}</div>}
 
-      {/* ── GENERATE (AI) TAB ── */}
-      {tab==='generate' && (
+      {/* ── CHAPTERS TAB ── */}
+      {tab==='chapters' && (
         <>
           <div className="glass" style={{ padding:'20px 22px', marginBottom:20 }}>
-            <div style={{ fontSize:10, color:'var(--dim)', letterSpacing:2, marginBottom:14 }}>SELECT CHAPTER TO GENERATE</div>
-
-            {/* Subject select */}
+            {/* Subject */}
             <div style={{ display:'flex', gap:6, marginBottom:14 }}>
               {['Chemistry','Physics','Biology'].map(s => (
                 <Btn key={s} active={subject===s} col={SC[s]} onClick={() => { setSubject(s); setChapter('') }}>{ICONS[s]} {s}</Btn>
               ))}
             </div>
 
-            {/* Chapter select */}
-            <select
-              value={chapter}
-              onChange={e => setChapter(e.target.value)}
-              style={{ width:'100%', background:'rgba(255,255,255,0.05)', border:'1px solid var(--border)', borderRadius:8, padding:'10px 14px', fontSize:13, color: chapter ? 'var(--text)' : 'var(--muted)', outline:'none', marginBottom:14, cursor:'pointer' }}
-            >
+            {/* Chapter */}
+            <select value={chapter} onChange={e => setChapter(e.target.value)}
+              style={{ width:'100%', background:'rgba(255,255,255,0.05)', border:'1px solid var(--border)', borderRadius:8, padding:'10px 14px', fontSize:13, color:chapter?'var(--text)':'var(--muted)', outline:'none', marginBottom:14, cursor:'pointer' }}>
               <option value="">Select a chapter…</option>
               {CHAPTERS[subject] && Object.entries(CHAPTERS[subject].sections).map(([sec, chs]) => (
                 <optgroup key={sec} label={sec}>
                   {chs.map(ch => {
-                    const cached = getCached(ch)
-                    const n = cached ? cached.length : 0
-                    return <option key={ch} value={ch}>{ch}{n > 0 ? ` (${n} cached)` : ''}</option>
+                    const acc = getChapterAccuracy(ch)
+                    const label = acc !== null ? ` · ${acc}% acc` : ''
+                    return <option key={ch} value={ch}>{ch}{label}</option>
                   })}
                 </optgroup>
               ))}
             </select>
 
-            {/* Count */}
-            <div style={{ display:'flex', gap:6, alignItems:'center', marginBottom:16 }}>
-              <span style={{ fontSize:12, color:'var(--muted)' }}>Generate:</span>
-              {[10,20,30,50].map(n => (
-                <Btn key={n} active={count===n} onClick={() => setCount(n)}>{n}Q</Btn>
+            {/* Accuracy + adaptive hint */}
+            {chapter && accuracy !== null && (
+              <div style={{ background:accuracy>=70?'rgba(0,229,170,0.08)':accuracy>=50?'rgba(255,184,48,0.08)':'rgba(255,77,141,0.08)', border:`1px solid ${accuracy>=70?'rgba(0,229,170,0.3)':accuracy>=50?'rgba(255,184,48,0.3)':'rgba(255,77,141,0.3)'}`, borderRadius:8, padding:'10px 14px', marginBottom:14, fontSize:12 }}>
+                <span style={{ color:accuracy>=70?'var(--green)':accuracy>=50?'var(--gold)':'var(--pink)', fontWeight:600 }}>
+                  {accuracy}% accuracy in {chapter}
+                </span>
+                <span style={{ color:'var(--muted)' }}>
+                  {accuracy>=70?' — Unlocked hard mode 🔥':accuracy>=50?' — Moving to medium questions':' — Building from basics'}
+                </span>
+              </div>
+            )}
+
+            {/* Difficulty */}
+            <div style={{ display:'flex', gap:6, alignItems:'center', marginBottom:12 }}>
+              <span style={{ fontSize:12, color:'var(--muted)', flexShrink:0 }}>Difficulty:</span>
+              {DIFFS.map(d => (
+                <Btn key={d} active={diff===d} col={d==='hard'?'var(--pink)':d==='medium'?'var(--gold)':d==='easy'?'var(--green)':'var(--orange)'} onClick={() => setDiff(d)}>
+                  {diffLabel(d)}
+                </Btn>
               ))}
             </div>
 
+            {/* Count */}
+            <div style={{ display:'flex', gap:6, alignItems:'center', marginBottom:16 }}>
+              <span style={{ fontSize:12, color:'var(--muted)', flexShrink:0 }}>Questions:</span>
+              {[10,20,30,50].map(n => <Btn key={n} active={count===n} onClick={() => setCount(n)}>{n}Q</Btn>)}
+            </div>
+
             <div style={{ display:'flex', gap:10, alignItems:'center' }}>
-              <button onClick={generateQs} disabled={loading || !chapter}
+              <button onClick={loadQs} disabled={loading||!chapter}
                 style={{ background:chapter?'var(--orange)':'var(--border)', border:'none', color:chapter?'#fff':'var(--dim)', borderRadius:8, padding:'10px 24px', fontSize:13, fontWeight:700, cursor:chapter?'pointer':'default', opacity:loading?0.7:1 }}>
-                {loading ? '⏳ Generating…' : `Generate ${count} Questions →`}
+                {loading ? '⏳ Loading…' : 'Start Practice →'}
               </button>
-              {cacheStats.total > 0 && (
-                <button onClick={() => { clearCache(); setCacheStats({ chapters:0, total:0 }); setQs([]) }}
-                  style={{ background:'none', border:'1px solid var(--border)', color:'var(--muted)', borderRadius:8, padding:'9px 16px', fontSize:12, cursor:'pointer' }}>
-                  Clear Cache
+              {cStats.total > 0 && (
+                <button onClick={() => { clearCache(); setCStats({chapters:0,total:0}); setQs([]) }}
+                  style={{ background:'none', border:'1px solid var(--border)', color:'var(--muted)', borderRadius:8, padding:'9px 14px', fontSize:12, cursor:'pointer' }}>
+                  Reset Cache
                 </button>
               )}
             </div>
-
-            {loadMsg && <div style={{ fontSize:11, color:'var(--green)', marginTop:10 }}>✅ {loadMsg}</div>}
-
-            <div style={{ fontSize:11, color:'var(--dim)', marginTop:10, lineHeight:1.8 }}>
-              💡 Questions are cached on your device after first generation.<br/>
-              Same chapter next time → loads instantly from cache. No API call needed.
-            </div>
+            {msg && <div style={{ fontSize:11, color:'var(--blue)', marginTop:8 }}>⏳ {msg}</div>}
           </div>
+
+          {/* Session score */}
+          {qs.length > 0 && answered.t > 0 && (
+            <div style={{ background:'rgba(255,255,255,0.03)', border:'1px solid var(--border)', borderRadius:10, padding:'10px 18px', marginBottom:14, display:'flex', gap:20, alignItems:'center' }}>
+              <span style={{ fontSize:12, color:'var(--muted)' }}>Session:</span>
+              <span style={{ color:'var(--green)', fontWeight:700 }}>✅ {answered.c}</span>
+              <span style={{ color:'var(--pink)', fontWeight:700 }}>❌ {answered.t-answered.c}</span>
+              <span style={{ color:'var(--orange)', fontWeight:700, fontFamily:'var(--mono)' }}>{Math.round(answered.c/answered.t*100)}%</span>
+              {answered.t >= 5 && answered.c/answered.t >= 0.8 && (
+                <span style={{ color:'var(--gold)', fontSize:11 }}>🔥 Crushing it! Next session will go harder.</span>
+              )}
+            </div>
+          )}
 
           {qs.length > 0 && (
             <>
               <div style={{ fontSize:10, color:'var(--dim)', letterSpacing:2, marginBottom:14 }}>
                 {qs.length} QUESTIONS — {chapter}
+                {diff==='auto' && adaptDiff && <span style={{ color:'var(--orange)' }}> · ADAPTIVE: {adaptDiff.toUpperCase()}</span>}
               </div>
-              {qs.map((q,i) => <QuestionCard key={q.id||i} q={q} idx={i}/>)}
-            </>
-          )}
-        </>
-      )}
-
-      {/* ── OFFLINE BANK TAB ── */}
-      {tab==='offline' && (
-        <>
-          <div className="glass" style={{ padding:'18px 20px', marginBottom:20 }}>
-            <div style={{ fontSize:10, color:'var(--dim)', letterSpacing:2, marginBottom:14 }}>FILTER HARDCODED QUESTIONS ({stats.total} total)</div>
-            <div style={{ display:'flex', gap:8, flexWrap:'wrap', marginBottom:12 }}>
-              <div style={{ display:'flex', gap:4 }}>
-                {SUBJECTS.map(s => <Btn key={s} active={subject===s} col={SC[s]||'var(--orange)'} onClick={() => setSubject(s)}>{s}</Btn>)}
-              </div>
-              <div style={{ display:'flex', gap:4 }}>
-                {DIFFS.map(d => <Btn key={d} active={diff===d} col={diffCol(d)} onClick={() => setDiff(d)}>{d==='All'?'All Levels':d}</Btn>)}
-              </div>
-              <div style={{ display:'flex', gap:4 }}>
-                {TYPES.map(t => <Btn key={t} active={type===t} col="#AA88FF" onClick={() => setType(t)}>{t==='All'?'All Types':t.toUpperCase()}</Btn>)}
-              </div>
-            </div>
-            <div style={{ display:'flex', gap:6, alignItems:'center', marginBottom:14 }}>
-              <span style={{ fontSize:12, color:'var(--muted)' }}>Count:</span>
-              {[10,20,30,50].map(n => <Btn key={n} active={count===n} onClick={() => setCount(n)}>{n}Q</Btn>)}
-            </div>
-            <button onClick={loadOffline}
-              style={{ background:'var(--orange)', border:'none', color:'#fff', borderRadius:8, padding:'10px 24px', fontSize:13, fontWeight:700, cursor:'pointer' }}>
-              Load Questions →
-            </button>
-          </div>
-          {qs.length > 0 && (
-            <>
-              <div style={{ fontSize:10, color:'var(--dim)', letterSpacing:2, marginBottom:14 }}>{qs.length} QUESTIONS LOADED</div>
-              {qs.map((q,i) => <QuestionCard key={q.id||i} q={q} idx={i}/>)}
+              {qs.map((q,i) => <QuestionCard key={q.id||i} q={q} idx={i} onAnswered={handleAnswered}/>)}
             </>
           )}
         </>
@@ -363,23 +263,19 @@ export default function Practice() {
         <>
           <div className="glass" style={{ padding:'16px 20px', marginBottom:16 }}>
             <input value={search} onChange={e => setSearch(e.target.value)}
-              placeholder="Search topic, keyword, chapter… e.g. hybridisation, lac operon, refraction"
+              placeholder="Search topic, concept, keyword… e.g. hybridisation, lac operon, first law"
               style={{ width:'100%', background:'rgba(255,255,255,0.04)', border:'1px solid var(--border)', borderRadius:8, padding:'11px 14px', fontSize:13, color:'var(--text)', outline:'none', fontFamily:'var(--font)' }}
               onFocus={e => e.target.style.borderColor='var(--orange)'}
               onBlur={e  => e.target.style.borderColor='var(--border)'}
             />
-            {search.length > 0 && (
-              <div style={{ fontSize:11, color:'var(--dim)', marginTop:8 }}>
-                {searchResults.length} result{searchResults.length!==1?'s':''} in hardcoded bank
-              </div>
-            )}
+            {search.length > 0 && <div style={{ fontSize:11, color:'var(--dim)', marginTop:8 }}>{searchRes.length} results</div>}
           </div>
-          {searchResults.length > 0
-            ? searchResults.map((q,i) => <QuestionCard key={q.id||i} q={q} idx={i}/>)
+          {searchRes.length > 0
+            ? searchRes.map((q,i) => <QuestionCard key={q.id||i} q={q} idx={i}/>)
             : search.length > 1 && (
               <div className="glass" style={{ padding:'40px', textAlign:'center', color:'var(--muted)' }}>
                 <div style={{ fontSize:32, marginBottom:10 }}>🔍</div>
-                No results for "{search}". Try the Generate tab for AI-powered questions.
+                No results for "{search}". Try the By Chapter tab.
               </div>
             )
           }
@@ -390,11 +286,11 @@ export default function Practice() {
       {tab==='ar' && (
         <>
           <div className="glass" style={{ padding:'14px 18px', marginBottom:18, fontSize:12, color:'var(--muted)', lineHeight:1.9 }}>
-            <span style={{ color:'#AA88FF', fontWeight:700, display:'block', marginBottom:6 }}>How to solve Assertion-Reasoning</span>
-            <span style={{ color:'var(--text)', fontWeight:600 }}>Option A</span> — Both A & R correct; R correctly explains A<br/>
-            <span style={{ color:'var(--text)', fontWeight:600 }}>Option B</span> — Both correct; R does NOT explain A<br/>
-            <span style={{ color:'var(--text)', fontWeight:600 }}>Option C</span> — A correct, R wrong<br/>
-            <span style={{ color:'var(--text)', fontWeight:600 }}>Option D</span> — A wrong (R may be right or wrong)
+            <span style={{ color:'#AA88FF', fontWeight:700, display:'block', marginBottom:6 }}>Assertion-Reasoning — How to solve</span>
+            <b style={{ color:'var(--text)' }}>A</b> — Both correct; Reason explains Assertion<br/>
+            <b style={{ color:'var(--text)' }}>B</b> — Both correct; Reason does NOT explain<br/>
+            <b style={{ color:'var(--text)' }}>C</b> — Assertion correct, Reason wrong<br/>
+            <b style={{ color:'var(--text)' }}>D</b> — Assertion wrong
           </div>
           <div style={{ fontSize:10, color:'var(--dim)', letterSpacing:2, marginBottom:14 }}>{arQs.length} A-R QUESTIONS</div>
           {arQs.map((q,i) => <QuestionCard key={q.id||i} q={q} idx={i}/>)}
