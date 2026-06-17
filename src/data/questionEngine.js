@@ -41,6 +41,7 @@ export function getAdaptiveDifficulty(chapter) {
 // ── Cache helpers ─────────────────────────────────────────────
 function getCached(chapter) {
   try {
+    if (typeof localStorage === 'undefined') return []
     const v = localStorage.getItem(CACHE_PREFIX + chapter)
     return v ? JSON.parse(v) : []
   } catch { return [] }
@@ -143,10 +144,12 @@ export function getQuestions({ subject = null, chapters = [], count = 20, diffic
 
 // ── Chapter question count (for UI display) ───────────────────
 export function getChapterCount(subject, chapter) {
-  const pyqN  = PYQ.filter(q => q.sub === subject && q.ch === chapter).length
-  const pracN = PRACTICE.filter(q => q.sub === subject && q.ch === chapter).length
-  const cacheN = getCached(chapter).length
-  return pyqN + pracN + cacheN
+  try {
+    const pyqN  = PYQ.filter(q => q.sub === subject && q.ch === chapter).length
+    const pracN = PRACTICE.filter(q => q.sub === subject && q.ch === chapter).length
+    const cacheN = getCached(chapter).length
+    return pyqN + pracN + cacheN
+  } catch { return 0 }
 }
 
 // ── AI generation (silent) ────────────────────────────────────
@@ -175,8 +178,10 @@ Return ONLY JSON array, no markdown:
     body: JSON.stringify({ model: 'claude-sonnet-4-6', max_tokens: 8000, messages: [{ role: 'user', content: prompt }] })
   })
   if (!res.ok) {
-    const err = await res.json().catch(() => ({}))
-    throw new Error(err.error || 'Generation failed. Ensure ANTHROPIC_API_KEY is set in Vercel.')
+    let errMsg = 'Generation failed.'
+    try { const err = await res.json(); errMsg = err.error || errMsg } catch {}
+    if (res.status === 500) errMsg = 'API key not configured. Go to Vercel → Settings → Environment Variables → add ANTHROPIC_API_KEY.'
+    throw new Error(errMsg)
   }
   const data = await res.json()
   const raw = data?.content?.[0]?.text || ''
