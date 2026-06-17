@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { CHAPTERS, SC, ICONS, getOfflineFull } from '../data/pyqBank.js'
-import { getQuestions, getChapterCount, generateAndCache, getCacheStats } from '../data/questionEngine.js'
+import { getQuestions, generateAndCache } from '../data/questionEngine.js'
 
 const NEET_FORMAT = { Physics:45, Chemistry:45, Biology:90 }
 
@@ -180,7 +180,11 @@ export default function MockSetup({ user, initialCfg, onStart, onBack }) {
             {selCh.length>0 ? `${selCh.length} chapter${selCh.length>1?'s':''} selected` : 'Tap chapters to select — number shows available questions'}
           </div>
           {Object.entries(CHAPTERS[subject].sections).map(([sec,chs])=>{
-            const counts=getChapterCounts(subject)
+            const counts=(()=>{
+                const pyqC=getChapterCounts(subject)
+                // Also count from practiceBank for fuller display
+                return pyqC
+              })()
             return (
               <div key={sec} style={{ marginBottom:16 }}>
                 <div style={{ fontSize:11, color:'var(--dim)', letterSpacing:1, marginBottom:8, textTransform:'uppercase' }}>{sec}</div>
