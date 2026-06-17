@@ -74,7 +74,7 @@ body::after {
   background:linear-gradient(180deg, rgba(255,255,255,0.018), rgba(255,255,255,0));
 }
 .liquid-aurora {
-  position:fixed; inset:0; pointer-events:none; z-index:0; overflow:hidden;
+  position:fixed; inset:0; pointer-events:none; z-index:-1; overflow:hidden;
 }
 .liquid-orb {
   position:absolute; width:36vw; height:36vw; min-width:360px; min-height:360px;
@@ -87,7 +87,7 @@ body::after {
 .liquid-orb.two { right:-14vw; top:4vw; background:rgba(100,174,255,.25); animation-duration:19s; animation-delay:-5s; }
 .liquid-orb.three { left:46vw; bottom:-18vw; background:rgba(24,231,182,.19); animation-duration:22s; animation-delay:-8s; }
 .liquid-grain {
-  position:fixed; inset:0; pointer-events:none; z-index:0; opacity:.18; mix-blend-mode:overlay;
+  position:fixed; inset:0; pointer-events:none; z-index:-1; opacity:.18; mix-blend-mode:overlay;
   background:url("data:image/svg+xml,%3Csvg viewBox='0 0 240 240' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='.42'/%3E%3C/svg%3E");
 }
 
