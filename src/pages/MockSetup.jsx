@@ -10,6 +10,7 @@ export default function MockSetup({ user, initialCfg, onStart, onBack }) {
   const [selCh, setSelCh]     = useState([])
   const [qCount, setQCount]   = useState(20)
   const [loading, setLoading] = useState(false)
+  const [loadMsg, setLoadMsg] = useState('')
   const [err, setErr]         = useState('')
 
   const normalise = (q,i) => ({
