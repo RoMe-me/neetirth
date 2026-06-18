@@ -15,23 +15,43 @@ const btn = (col='#FF6B00', full=false) => ({
 })
 
 export default function Exam({ user, examData, resumeInfo, onFinish, onHome }) {
-  // Load from resume or fresh examData
+  // Fresh examData ALWAYS wins when a new mock was just started — never let a
+  // stale/abandoned resume silently hijack a brand-new mock the user just picked.
+  // Resume is only used as a fallback (e.g. reopening the app later via Home's
+  // "Resume?" card with no fresh examData in memory).
   const initState = () => {
+    if (examData && Array.isArray(examData.qs) && examData.qs.length > 0) {
+      // Validate every question has a usable options object before trusting it —
+      // one malformed cached/generated question should never blank the whole exam.
+      const validQs = examData.qs.filter(q =>
+        q && q.options && typeof q.options === 'object' &&
+        ['A','B','C','D'].every(k => q.options[k] != null)
+      )
+      if (validQs.length > 0) {
+        return {
+          qs: validQs, ans: {}, marked: new Set(),
+          cur: 0, timeLeft: examData.timeLimit, cfg: examData.cfg
+        }
+      }
+      // Fresh data existed but every question was malformed — fall through to
+      // resume/empty rather than rendering a guaranteed-blank screen.
+    }
     const r = getResume()
     if (r && r.qs?.length > 0) {
-      return {
-        qs: r.qs, ans: r.ans || {}, marked: new Set(r.marked || []),
-        cur: r.cur || 0, timeLeft: r.timeLeft || 3600, cfg: r.cfg
+      const validQs = r.qs.filter(q =>
+        q && q.options && typeof q.options === 'object' &&
+        ['A','B','C','D'].every(k => q.options[k] != null)
+      )
+      if (validQs.length > 0) {
+        return {
+          qs: validQs, ans: r.ans || {}, marked: new Set(r.marked || []),
+          cur: Math.min(r.cur || 0, validQs.length - 1), timeLeft: r.timeLeft || 3600, cfg: r.cfg
+        }
       }
+      // Stale resume itself is corrupted — discard it instead of loading it forever.
+      clearResume()
     }
-    // examData must exist if no resume — guard against null crash
-    if (!examData || !examData.qs) {
-      return { qs: [], ans: {}, marked: new Set(), cur: 0, timeLeft: 3600, cfg: {} }
-    }
-    return {
-      qs: examData.qs, ans: {}, marked: new Set(),
-      cur: 0, timeLeft: examData.timeLimit, cfg: examData.cfg
-    }
+    return { qs: [], ans: {}, marked: new Set(), cur: 0, timeLeft: 3600, cfg: {} }
   }
 
   const init = initState()
