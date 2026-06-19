@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, Component } from 'react'
 import { Analytics } from '@vercel/analytics/react'
 import Layout from './components/Layout.jsx'
 import Landing from './pages/Landing.jsx'
@@ -9,9 +9,41 @@ import Results from './pages/Results.jsx'
 import Progress from './pages/Progress.jsx'
 import PYQBank from './pages/PYQBank.jsx'
 import Practice from './pages/Practice.jsx'
-import { getUser, getHistory, getWeakness, getResume } from './lib/storage.js'
+import { getUser, getHistory, getWeakness, getResume, clearResume } from './lib/storage.js'
 
-export default function App() {
+// Catches ANY render crash anywhere in the app and shows a clear, recoverable
+// error screen instead of a silent blank page. This is the permanent fix for
+// the entire class of "blank page" bugs — whatever throws next, the user sees
+// exactly what broke instead of nothing at all.
+class ErrorBoundary extends Component {
+  constructor(props) { super(props); this.state = { hasError:false, error:null } }
+  static getDerivedStateFromError(error) { return { hasError:true, error } }
+  componentDidCatch(error, info) { console.error('Neetirth crashed:', error, info) }
+  handleReset = () => {
+    try { clearResume() } catch {}
+    this.setState({ hasError:false, error:null })
+    window.location.reload()
+  }
+  render() {
+    if (this.state.hasError) {
+      return (
+        <div style={{ height:'100vh', background:'var(--bg)', color:'#e0e0f0', display:'flex', flexDirection:'column', alignItems:'center', justifyContent:'center', gap:16, padding:24, textAlign:'center', fontFamily:'inherit' }}>
+          <div style={{ fontSize:40 }}>⚠️</div>
+          <div style={{ fontSize:18, fontWeight:700, color:'var(--orange)' }}>Something broke</div>
+          <div style={{ fontSize:12, color:'var(--muted)', maxWidth:340 }}>
+            {this.state.error?.message || 'Unknown error'} — this has been logged. Tap below to reset and reload.
+          </div>
+          <button onClick={this.handleReset} style={{ background:'var(--orange)18', border:'1px solid var(--orange)55', color:'var(--orange)', borderRadius:8, padding:'10px 24px', fontSize:13, fontWeight:600, cursor:'pointer' }}>
+            Reset & Reload
+          </button>
+        </div>
+      )
+    }
+    return this.props.children
+  }
+}
+
+function AppInner() {
   const [page,      setPage]      = useState('loading')
   const [user,      setUser]      = useState(null)
   const [history,   setHistory]   = useState([])
@@ -107,4 +139,8 @@ export default function App() {
       <Analytics />
     </Layout>
   )
+}
+
+export default function App() {
+  return <ErrorBoundary><AppInner/></ErrorBoundary>
 }
