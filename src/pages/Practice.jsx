@@ -6,6 +6,7 @@ import {
   getQuestions, generateAndCache, getCacheStats, clearCache,
   getChapterAccuracy, getAdaptiveDifficulty, recordPerformance
 } from '../data/questionEngine.js'
+import { updateWeakness, getHistory, saveHistory } from '../lib/storage.js'
 
 const diffCol = d => d==='hard'?'var(--pink)':d==='medium'?'var(--gold)':'var(--green)'
 const DIFFS   = ['auto','easy','medium','hard']
@@ -82,6 +83,8 @@ export default function Practice() {
   const [err,      setErr]      = useState('')
   const [cStats,   setCStats]   = useState(getCacheStats())
   const [answered, setAnswered] = useState({ c:0, t:0 })
+  const [sessionStart, setSessionStart] = useState(null)
+  const [elapsed, setElapsed] = useState(0)
 
   const stats       = getPracticeStats()
   const arQs        = PRACTICE.filter(q => q.type === 'ar')
@@ -108,10 +111,41 @@ export default function Practice() {
         result = getQuestions({ subject, chapters:[chapter], count, difficulty: selectedDiff || null })
       }
       setQs(result); setMsg('')
+      setSessionStart(Date.now()); setElapsed(0)
     } catch(e) {
       setMsg(''); setErr(e.message)
     }
     setLoading(false)
+  }
+
+  // Live session timer — ticks while a practice session is active, same feel as a real exam
+  useEffect(() => {
+    if (!sessionStart || qs.length === 0) return
+    const id = setInterval(() => setElapsed(Math.floor((Date.now() - sessionStart) / 1000)), 1000)
+    return () => clearInterval(id)
+  }, [sessionStart, qs.length])
+
+  const fmtTime = s => {
+    const m = Math.floor(s/60), sec = s%60
+    return `${m}:${String(sec).padStart(2,'0')}`
+  }
+
+  // Finish session — write into the SAME history/weakness storage mocks use, so practice
+  // actually shows up in Progress/trend/AIR instead of vanishing into nothing.
+  const finishSession = () => {
+    const { c, t } = answered
+    const w = t - c
+    const score = c*4 - w
+    const max   = t*4
+    const pct   = max > 0 ? Math.round(score/max*100) : 0
+    if (chapter) updateWeakness({ [chapter]: { c, w, t, sub: subject } })
+    const rec = {
+      id: Date.now(), date: new Date().toISOString(),
+      type: `Practice: ${chapter}`, n: t, score, max, pct,
+      c, w, s: 0, offline: false, timeSpent: elapsed
+    }
+    saveHistory([...getHistory(), rec])
+    setQs([]); setAnswered({ c:0, t:0 }); setSessionStart(null); setElapsed(0)
   }
 
   const Btn = ({ active, col='var(--orange)', onClick, children }) => (
@@ -235,14 +269,18 @@ export default function Practice() {
 
           {/* Session score */}
           {qs.length > 0 && answered.t > 0 && (
-            <div style={{ background:'rgba(255,255,255,0.03)', border:'1px solid var(--border)', borderRadius:10, padding:'10px 18px', marginBottom:14, display:'flex', gap:20, alignItems:'center' }}>
+            <div style={{ background:'rgba(255,255,255,0.03)', border:'1px solid var(--border)', borderRadius:10, padding:'10px 18px', marginBottom:14, display:'flex', gap:20, alignItems:'center', flexWrap:'wrap' }}>
               <span style={{ fontSize:12, color:'var(--muted)' }}>Session:</span>
               <span style={{ color:'var(--green)', fontWeight:700 }}>✅ {answered.c}</span>
               <span style={{ color:'var(--pink)', fontWeight:700 }}>❌ {answered.t-answered.c}</span>
               <span style={{ color:'var(--orange)', fontWeight:700, fontFamily:'var(--mono)' }}>{Math.round(answered.c/answered.t*100)}%</span>
+              <span style={{ color:'var(--blue)', fontWeight:700, fontFamily:'var(--mono)' }}>⏱ {fmtTime(elapsed)}</span>
               {answered.t >= 5 && answered.c/answered.t >= 0.8 && (
                 <span style={{ color:'var(--gold)', fontSize:11 }}>🔥 Crushing it! Next session will go harder.</span>
               )}
+              <button onClick={finishSession} style={{ marginLeft:'auto', background:'var(--orange)18', border:'1px solid var(--orange)55', color:'var(--orange)', borderRadius:8, padding:'7px 16px', fontSize:12, fontWeight:600, cursor:'pointer' }}>
+                Finish Session →
+              </button>
             </div>
           )}
 
