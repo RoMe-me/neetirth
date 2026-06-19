@@ -170,7 +170,7 @@ export default function Progress({ user, history, weakness, onBack, onClear }) {
       {/* HISTORY TAB */}
       {activeTab==='history' && (
         <div style={{ background:'var(--card)', border:'1px solid var(--border)', borderRadius:12, padding:'24px' }}>
-          <div style={{ fontSize:10, color:'var(--dim)', letterSpacing:2, marginBottom:18 }}>ALL MOCKS — NEWEST FIRST</div>
+          <div style={{ fontSize:10, color:'var(--dim)', letterSpacing:2, marginBottom:18 }}>ALL ACTIVITY — NEWEST FIRST</div>
           {rev.map(m=>{
             const col=m.pct>=60?'var(--green)':m.pct>=40?'var(--gold)':'var(--pink)'
             const p=predictAIR(m.score)
@@ -190,6 +190,7 @@ export default function Progress({ user, history, weakness, onBack, onClear }) {
                       <span style={{ color:'var(--pink)' }}>❌ {m.w}</span>
                       <span>⭕ {m.s}</span>
                       <span>· {m.n}Q</span>
+                      {m.timeSpent != null && <span>⏱ {Math.floor(m.timeSpent/60)}:{String(m.timeSpent%60).padStart(2,'0')}</span>}
                     </div>
                   </div>
                   <div style={{ textAlign:'right' }}>
