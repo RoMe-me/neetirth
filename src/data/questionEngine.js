@@ -133,11 +133,7 @@ export function getQuestions({ subject = null, chapters = [], count = 20, diffic
     return true
   })
 
-  if (!pool.length) throw new Error(
-    chapters.length
-      ? `No questions found for: ${chapters.join(', ')}. Use the Practice page to generate questions for this chapter first.`
-      : `No questions for ${subject || 'this selection'}.`
-  )
+  if (!pool.length) return []
 
   return balancedPick(pool, Math.min(count, pool.length), difficulty)
 }
