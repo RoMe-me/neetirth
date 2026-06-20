@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { CHAPTERS, SC, ICONS, getOfflineFull } from '../data/pyqBank.js'
+import { CHAPTERS, SC, ICONS, getOfflineFull, getChapterCounts } from '../data/pyqBank.js'
 import { getQuestions, generateAndCache } from '../data/questionEngine.js'
 
 const NEET_FORMAT = { Physics:45, Chemistry:45, Biology:90 }
