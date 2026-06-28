@@ -150,7 +150,12 @@ export function getChapterCount(subject, chapter) {
 
 // ── AI generation (silent) ────────────────────────────────────
 export async function generateAndCache(chapter, subject, count = 25) {
-  const prompt = `Generate exactly ${count} NEET UG practice questions for "${chapter}" (${subject}).
+  // Cap the per-call batch size regardless of what's requested — asking the AI for
+  // too many questions in one shot reliably truncates the response before max_tokens
+  // covers it, which fails JSON parsing and silently yields ZERO new questions.
+  // Better to reliably get 25-30 good ones than to ask for 45 and get none.
+  const safeCount = Math.min(count, 28)
+  const prompt = `Generate exactly ${safeCount} NEET UG practice questions for "${chapter}" (${subject}).
 
 Difficulty (STRICT — real NEET 2024 pattern):
 30% easy | 50% medium | 20% hard
@@ -171,7 +176,7 @@ Return ONLY JSON array, no markdown:
   const res = await fetch('/api/generate', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ model: 'claude-sonnet-4-6', max_tokens: 8000, messages: [{ role: 'user', content: prompt }] })
+    body: JSON.stringify({ model: 'claude-sonnet-4-6', max_tokens: 16000, messages: [{ role: 'user', content: prompt }] })
   })
   if (!res.ok) {
     let errMsg = 'Generation failed.'
