@@ -30,11 +30,17 @@ export default function MockSetup({ user, initialCfg, onStart, onBack }) {
       } else {
         // Use unified engine — combines PYQ + practice + AI cache
         raw = getQuestions({ subject: cfg.subject, chapters: cfg.chapters||[], count: cfg.qCount })
-        // If still not enough, try to generate silently
-        if (raw.length < Math.min(5, cfg.qCount) && cfg.chapters?.length > 0) {
-          setLoadMsg('Generating questions for this chapter…')
+        // Top up via AI if we don't have enough to cover what the student actually asked for —
+        // not just "more than almost nothing". A chapter with 7 questions still needs topping
+        // up if the student picked 30.
+        if (raw.length < cfg.qCount && cfg.chapters?.length > 0) {
+          setLoadMsg('Generating more questions for this chapter…')
           for (const ch of cfg.chapters) {
-            try { await generateAndCache(ch, cfg.subject, 20) } catch {}
+            try {
+              await generateAndCache(ch, cfg.subject, Math.max(20, cfg.qCount))
+            } catch (genErr) {
+              console.error('Question generation failed for', ch, genErr?.message || genErr)
+            }
           }
           raw = getQuestions({ subject: cfg.subject, chapters: cfg.chapters, count: cfg.qCount })
         }
