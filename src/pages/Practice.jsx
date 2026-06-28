@@ -104,9 +104,13 @@ export default function Practice() {
       const selectedDiff = diff === 'auto' ? adaptDiff : diff
       let result = getQuestions({ subject, chapters:[chapter], count,
         difficulty: selectedDiff || null })
-      if (result.length < Math.min(5, count)) {
+      if (result.length < count) {
         setMsg('Fetching more questions for this chapter…')
-        await generateAndCache(chapter, subject, 25)
+        try {
+          await generateAndCache(chapter, subject, Math.max(25, count))
+        } catch (genErr) {
+          console.error('Question generation failed for', chapter, genErr?.message || genErr)
+        }
         setCStats(getCacheStats())
         result = getQuestions({ subject, chapters:[chapter], count, difficulty: selectedDiff || null })
       }
