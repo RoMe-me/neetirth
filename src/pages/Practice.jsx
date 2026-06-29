@@ -3,7 +3,7 @@ import { PRACTICE, getPracticeStats, searchPractice } from '../data/practiceBank
 import { CHAPTERS, SC, ICONS } from '../data/pyqBank.js'
 import LiquidBlock, { LiquidTag } from '../components/LiquidBlock.jsx'
 import {
-  getQuestions, generateAndCache, getCacheStats, clearCache,
+  getQuestions, buildChapterDepth, getCacheStats, clearCache,
   getChapterAccuracy, getAdaptiveDifficulty, recordPerformance
 } from '../data/questionEngine.js'
 import { updateWeakness, getHistory, saveHistory } from '../lib/storage.js'
@@ -105,20 +105,17 @@ export default function Practice() {
       let result = getQuestions({ subject, chapters:[chapter], count,
         difficulty: selectedDiff || null })
       if (result.length < count) {
-        const TARGET_POOL = 80
-        for (let attempt = 0; attempt < 3; attempt++) {
-          const currentPool = getQuestions({ subject, chapters:[chapter], count: 9999 })
-          if (currentPool.length >= Math.max(count, TARGET_POOL)) break
-          setMsg(`Building question bank for ${chapter}… (${currentPool.length} so far)`)
-          try {
-            await generateAndCache(chapter, subject, 28)
-          } catch (genErr) {
-            console.error('Question generation failed for', chapter, genErr?.message || genErr)
-            break
-          }
-        }
+        const depth = await buildChapterDepth({
+          subject,
+          chapter,
+          requestedCount: count,
+          onProgress: ({ current }) => setMsg(`Building question bank for ${chapter}… (${current} so far)`)
+        })
         setCStats(getCacheStats())
         result = getQuestions({ subject, chapters:[chapter], count, difficulty: selectedDiff || null })
+        if (depth.error && result.length < count) {
+          throw new Error(`Only ${result.length} questions are available for ${chapter}. Generation failed: ${depth.error}`)
+        }
       }
       setQs(result); setMsg('')
       setSessionStart(Date.now()); setElapsed(0)

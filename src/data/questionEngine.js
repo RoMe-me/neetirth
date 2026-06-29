@@ -39,7 +39,7 @@ export function getAdaptiveDifficulty(chapter) {
 }
 
 // ── Cache helpers ─────────────────────────────────────────────
-function getCached(chapter) {
+export function getCachedQuestions(chapter) {
   try {
     if (typeof localStorage === 'undefined') return []
     const v = localStorage.getItem(CACHE_PREFIX + chapter)
@@ -110,8 +110,8 @@ export function getQuestions({ subject = null, chapters = [], count = 20, diffic
 
   // From AI cache
   chapters.forEach(ch => {
-    const cached = getCached(ch)
-    pool.push(...cached)
+    const cached = getCachedQuestions(ch)
+    pool.push(...cached.filter(q => !subject || q.sub === subject))
   })
   if (!chapters.length && subject) {
     // Get all cached for subject chapters
@@ -119,7 +119,7 @@ export function getQuestions({ subject = null, chapters = [], count = 20, diffic
       ? Object.values(CHAPTERS[subject].sections).flat()
       : []
     allChs.forEach(ch => {
-      const cached = getCached(ch)
+      const cached = getCachedQuestions(ch)
       pool.push(...cached.filter(q => q.sub === subject))
     })
   }
@@ -143,12 +143,34 @@ export function getChapterCount(subject, chapter) {
   try {
     const pyqN  = PYQ.filter(q => q.sub === subject && q.ch === chapter).length
     const pracN = PRACTICE.filter(q => q.sub === subject && q.ch === chapter).length
-    const cacheN = getCached(chapter).length
+    const cacheN = getCachedQuestions(chapter).filter(q => q.sub === subject).length
     return pyqN + pracN + cacheN
   } catch { return 0 }
 }
 
-// ── AI generation (silent) ────────────────────────────────────
+function questionLooksUsable(q, chapter, subject) {
+  if (!q || typeof q !== 'object') return false
+  if (!q.q || !q.o || !q.a || !q.e) return false
+  if (q.ch !== chapter || q.sub !== subject) return false
+  if (!['A', 'B', 'C', 'D'].includes(q.a)) return false
+  return ['A', 'B', 'C', 'D'].every(opt => typeof q.o?.[opt] === 'string' && q.o[opt].trim())
+}
+
+const getGenerationErrorMessage = async (res) => {
+  let errMsg = `Generation failed with HTTP ${res.status}.`
+  try {
+    const err = await res.json()
+    if (typeof err?.error === 'string') errMsg = err.error
+    else if (typeof err?.error?.message === 'string') errMsg = err.error.message
+    else if (typeof err?.message === 'string') errMsg = err.message
+  } catch {}
+  if (res.status === 500 && /ANTHROPIC_API_KEY/i.test(errMsg)) {
+    errMsg = 'API key not configured. Go to Vercel → Settings → Environment Variables → add ANTHROPIC_API_KEY.'
+  }
+  return errMsg
+}
+
+// ── AI generation ─────────────────────────────────────────────
 export async function generateAndCache(chapter, subject, count = 25) {
   // Cap the per-call batch size regardless of what's requested — asking the AI for
   // too many questions in one shot reliably truncates the response before max_tokens
@@ -179,20 +201,55 @@ Return ONLY JSON array, no markdown:
     body: JSON.stringify({ model: 'claude-sonnet-4-6', max_tokens: 16000, messages: [{ role: 'user', content: prompt }] })
   })
   if (!res.ok) {
-    let errMsg = 'Generation failed.'
-    try { const err = await res.json(); errMsg = err.error || errMsg } catch {}
-    if (res.status === 500) errMsg = 'API key not configured. Go to Vercel → Settings → Environment Variables → add ANTHROPIC_API_KEY.'
-    throw new Error(errMsg)
+    throw new Error(await getGenerationErrorMessage(res))
   }
   const data = await res.json()
   const raw = data?.content?.[0]?.text || ''
   const match = raw.match(/\[[\s\S]*\]/)
   if (!match) throw new Error('Invalid response from AI. Try again.')
-  const generated = JSON.parse(match[0]).map((q, i) => ({ ...q, id: `gen_${Date.now()}_${i}`, pyq: false }))
+  const parsed = JSON.parse(match[0])
+  if (!Array.isArray(parsed)) throw new Error('Invalid question batch from AI. Try again.')
+
+  const generated = parsed
+    .map((q, i) => ({
+      ...q,
+      ch: q.ch || chapter,
+      sub: q.sub || subject,
+      id: `gen_${Date.now()}_${i}`,
+      pyq: false
+    }))
+    .filter(q => questionLooksUsable(q, chapter, subject))
+
+  if (!generated.length) {
+    throw new Error(`AI returned no usable questions for ${chapter}.`)
+  }
 
   // Merge with existing cache
-  const existing = getCached(chapter)
+  const existing = getCachedQuestions(chapter)
   const merged = [...existing, ...generated]
   setCached(chapter, merged)
   return { generated, total: merged.length }
+}
+
+export async function buildChapterDepth({ subject, chapter, requestedCount, targetPool = 80, maxAttempts = 3, onProgress }) {
+  let lastError = null
+  let currentPool = getQuestions({ subject, chapters: [chapter], count: 9999 })
+
+  for (let attempt = 0; attempt < maxAttempts; attempt++) {
+    if (currentPool.length >= Math.max(requestedCount, targetPool)) break
+    onProgress?.({ chapter, attempt: attempt + 1, current: currentPool.length, target: targetPool })
+    try {
+      await generateAndCache(chapter, subject, 28)
+    } catch (err) {
+      lastError = err
+      break
+    }
+    currentPool = getQuestions({ subject, chapters: [chapter], count: 9999 })
+  }
+
+  return {
+    available: currentPool.length,
+    target: Math.max(requestedCount, targetPool),
+    error: lastError?.message || null
+  }
 }
