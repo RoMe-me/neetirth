@@ -30,16 +30,23 @@ export default function MockSetup({ user, initialCfg, onStart, onBack }) {
       } else {
         // Use unified engine — combines PYQ + practice + AI cache
         raw = getQuestions({ subject: cfg.subject, chapters: cfg.chapters||[], count: cfg.qCount })
-        // Top up via AI if we don't have enough to cover what the student actually asked for —
-        // not just "more than almost nothing". A chapter with 7 questions still needs topping
-        // up if the student picked 30.
+        // Build real depth on first visit to a sparse chapter — not just enough for
+        // THIS mock, or every repeat attempt on the same chapter overlaps heavily.
+        // Loop up to 3 generation calls (cache is additive, never overwrites)
+        // targeting a healthy pool before settling for whatever's available.
         if (raw.length < cfg.qCount && cfg.chapters?.length > 0) {
-          setLoadMsg('Generating more questions for this chapter…')
+          const TARGET_POOL = 80
           for (const ch of cfg.chapters) {
-            try {
-              await generateAndCache(ch, cfg.subject, Math.max(20, cfg.qCount))
-            } catch (genErr) {
-              console.error('Question generation failed for', ch, genErr?.message || genErr)
+            for (let attempt = 0; attempt < 3; attempt++) {
+              const currentPool = getQuestions({ subject: cfg.subject, chapters: [ch], count: 9999 })
+              if (currentPool.length >= Math.max(cfg.qCount, TARGET_POOL)) break
+              setLoadMsg(`Building question bank for ${ch}… (${currentPool.length} so far)`)
+              try {
+                await generateAndCache(ch, cfg.subject, 28)
+              } catch (genErr) {
+                console.error('Question generation failed for', ch, genErr?.message || genErr)
+                break
+              }
             }
           }
           raw = getQuestions({ subject: cfg.subject, chapters: cfg.chapters, count: cfg.qCount })
