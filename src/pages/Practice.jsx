@@ -105,11 +105,17 @@ export default function Practice() {
       let result = getQuestions({ subject, chapters:[chapter], count,
         difficulty: selectedDiff || null })
       if (result.length < count) {
-        setMsg('Fetching more questions for this chapter…')
-        try {
-          await generateAndCache(chapter, subject, Math.max(25, count))
-        } catch (genErr) {
-          console.error('Question generation failed for', chapter, genErr?.message || genErr)
+        const TARGET_POOL = 80
+        for (let attempt = 0; attempt < 3; attempt++) {
+          const currentPool = getQuestions({ subject, chapters:[chapter], count: 9999 })
+          if (currentPool.length >= Math.max(count, TARGET_POOL)) break
+          setMsg(`Building question bank for ${chapter}… (${currentPool.length} so far)`)
+          try {
+            await generateAndCache(chapter, subject, 28)
+          } catch (genErr) {
+            console.error('Question generation failed for', chapter, genErr?.message || genErr)
+            break
+          }
         }
         setCStats(getCacheStats())
         result = getQuestions({ subject, chapters:[chapter], count, difficulty: selectedDiff || null })
