@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { CHAPTERS, SC, ICONS, getOfflineFull, getChapterCounts } from '../data/pyqBank.js'
-import { getQuestions, generateAndCache } from '../data/questionEngine.js'
+import { getQuestions, buildChapterDepth } from '../data/questionEngine.js'
 
 const NEET_FORMAT = { Physics:45, Chemistry:45, Biology:90 }
 
@@ -35,18 +35,15 @@ export default function MockSetup({ user, initialCfg, onStart, onBack }) {
         // Loop up to 3 generation calls (cache is additive, never overwrites)
         // targeting a healthy pool before settling for whatever's available.
         if (raw.length < cfg.qCount && cfg.chapters?.length > 0) {
-          const TARGET_POOL = 80
           for (const ch of cfg.chapters) {
-            for (let attempt = 0; attempt < 3; attempt++) {
-              const currentPool = getQuestions({ subject: cfg.subject, chapters: [ch], count: 9999 })
-              if (currentPool.length >= Math.max(cfg.qCount, TARGET_POOL)) break
-              setLoadMsg(`Building question bank for ${ch}… (${currentPool.length} so far)`)
-              try {
-                await generateAndCache(ch, cfg.subject, 28)
-              } catch (genErr) {
-                console.error('Question generation failed for', ch, genErr?.message || genErr)
-                break
-              }
+            const depth = await buildChapterDepth({
+              subject: cfg.subject,
+              chapter: ch,
+              requestedCount: cfg.qCount,
+              onProgress: ({ current }) => setLoadMsg(`Building question bank for ${ch}… (${current} so far)`)
+            })
+            if (depth.error) {
+              throw new Error(`Could only find ${depth.available} questions for ${ch}. Generation failed: ${depth.error}`)
             }
           }
           raw = getQuestions({ subject: cfg.subject, chapters: cfg.chapters, count: cfg.qCount })
@@ -54,6 +51,9 @@ export default function MockSetup({ user, initialCfg, onStart, onBack }) {
       }
       if (!raw.length) throw new Error(
         'No questions found. Visit the Practice page → Generate Questions for this chapter first.'
+      )
+      if (!cfg.isFull && raw.length < cfg.qCount) throw new Error(
+        `Only ${raw.length} questions are available for this mock. Try a smaller question count or retry generation.`
       )
       onStart({ qs:raw.map(normalise), timeLimit:cfg.isFull?12000:raw.length*72, cfg, startedAt:new Date().toISOString() })
     } catch(e) { setErr(e.message) }
