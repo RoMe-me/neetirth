@@ -9,7 +9,10 @@ export default async function handler(req, res) {
       body: JSON.stringify(req.body)
     });
     const data = await r.json();
-    if (!r.ok) return res.status(r.status).json(data);
+    if (!r.ok) {
+      const message = data?.error?.message || data?.error || data?.message || `Anthropic request failed with HTTP ${r.status}`;
+      return res.status(r.status).json({ error: message, upstreamStatus: r.status });
+    }
     res.status(200).json(data);
   } catch (e) { res.status(500).json({ error: e.message }); }
 }

@@ -10,7 +10,8 @@ import { useRef, useCallback, memo } from 'react'
  *  style       object  outer container styles
  *  className   string  extra classes
  *  children    node    content above the liquid
- *  ripple      bool    add click ripple (default true)
+ *  ripple      bool    add click ripple (default false, cheaper on phones)
+ *  interactive bool    track pointer tilt/glow (default false)
  */
 const LiquidBlock = memo(function LiquidBlock({
   fillColor = 'var(--liq-white)',
@@ -18,7 +19,8 @@ const LiquidBlock = memo(function LiquidBlock({
   style = {},
   className = '',
   children,
-  ripple = true,
+  ripple = false,
+  interactive = false,
 }) {
   const fillRef = useRef(null)
   const containerRef = useRef(null)
@@ -69,9 +71,9 @@ const LiquidBlock = memo(function LiquidBlock({
     <div
       ref={containerRef}
       onClick={handleClick}
-      onPointerMove={handlePointerMove}
-      onPointerLeave={handlePointerLeave}
-      className={`glass glass-card ${className}`}
+      onPointerMove={interactive ? handlePointerMove : undefined}
+      onPointerLeave={interactive ? handlePointerLeave : undefined}
+      className={`glass glass-card liquid-block ${className}`}
       style={{
         position: 'relative',
         overflow: 'hidden',
@@ -146,7 +148,7 @@ export function LiquidTag({ children, color, style={} }) {
 
 export function LiquidBadge({ children, style={} }) {
   return (
-    <LiquidBlock fillColor="rgba(255,255,255,0.08)" fillHeight={60} ripple={true}
+    <LiquidBlock fillColor="rgba(255,255,255,0.08)" fillHeight={60}
       style={{ display:'inline-flex', alignItems:'center', gap:4, padding:'2px 8px', borderRadius:6, fontSize:9, fontWeight:600, color:'var(--dim)', letterSpacing:1, ...style }}>
       {children}
     </LiquidBlock>

@@ -9,6 +9,7 @@ import Results from './pages/Results.jsx'
 import Progress from './pages/Progress.jsx'
 import PYQBank from './pages/PYQBank.jsx'
 import Practice from './pages/Practice.jsx'
+import AskAI from './pages/AskAI.jsx'
 import { getUser, getHistory, getWeakness, getResume, clearResume } from './lib/storage.js'
 
 // Catches ANY render crash anywhere in the app and shows a clear, recoverable
@@ -70,6 +71,7 @@ function AppInner() {
     if(id==='progress') nav('progress')
     if(id==='pyq')      nav('pyq')
     if(id==='practice') nav('practice')
+    if(id==='ask')      nav('ask')
   }
 
   // Loading
@@ -136,6 +138,7 @@ function AppInner() {
       )}
       {page==='pyq' && <PYQBank/>}
       {page==='practice' && <Practice/>}
+      {page==='ask' && <AskAI/>}
       <Analytics />
     </Layout>
   )
