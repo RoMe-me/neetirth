@@ -36,15 +36,13 @@ export default function MockSetup({ user, initialCfg, onStart, onBack }) {
         // targeting a healthy pool before settling for whatever's available.
         if (raw.length < cfg.qCount && cfg.chapters?.length > 0) {
           for (const ch of cfg.chapters) {
-            const depth = await buildChapterDepth({
+            await buildChapterDepth({
               subject: cfg.subject,
               chapter: ch,
               requestedCount: cfg.qCount,
               onProgress: ({ current }) => setLoadMsg(`Building question bank for ${ch}… (${current} so far)`)
             })
-            if (depth.error) {
-              throw new Error(`Could only find ${depth.available} questions for ${ch}. Generation failed: ${depth.error}`)
-            }
+            // Non-fatal — if generation failed, we continue with whatever is available
           }
           raw = getQuestions({ subject: cfg.subject, chapters: cfg.chapters, count: cfg.qCount })
         }
