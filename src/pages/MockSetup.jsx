@@ -47,12 +47,13 @@ export default function MockSetup({ user, initialCfg, onStart, onBack }) {
           raw = getQuestions({ subject: cfg.subject, chapters: cfg.chapters, count: cfg.qCount })
         }
       }
-      if (!raw.length) throw new Error(
-        'No questions found. Visit the Practice page → Generate Questions for this chapter first.'
-      )
-      if (!cfg.isFull && raw.length < cfg.qCount) throw new Error(
-        `Only ${raw.length} questions are available for this mock. Try a smaller question count or retry generation.`
-      )
+      if (!raw.length) {
+        // Genuinely nothing at all — guide them to Practice page
+        throw new Error('No questions found for this chapter yet. Go to Practice → select this chapter → Generate Questions first.')
+      }
+      // If we got fewer than requested, just start with what we have —
+      // showing 5 real questions is better than showing an error screen.
+      // The pool grows each visit so it gets better over time.
       onStart({ qs:raw.map(normalise), timeLimit:cfg.isFull?12000:raw.length*72, cfg, startedAt:new Date().toISOString() })
     } catch(e) { setErr(e.message) }
     finally { setLoading(false); setLoadMsg('') }
