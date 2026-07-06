@@ -233,3 +233,5 @@ Always give Claude the GitHub classic token when it needs to push code.
 *Last updated: June 2026 | Platform: Neetirth | Built for every NEET 2027 aspirant*
 
 <!-- redeploy: force fresh env var pickup -->
+
+<!-- deploy trigger: 2026-07-06T10:52:47.773718 -->
