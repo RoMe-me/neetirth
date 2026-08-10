@@ -15,6 +15,7 @@ const NTA_2025 = [
   { marks: 450, air:480000},{ marks: 430, air:620000},
   { marks: 400, air:850000},{ marks: 360, air:1200000},
   { marks: 320, air:1600000},{ marks: 280, air:2000000},
+  { marks: 0,   air:2200000},
 ];
 
 // 2027 adjustment factor (26L vs 22.1L → ~17% more competition)
@@ -58,7 +59,12 @@ export function predictAIR(score) {
   else if (score >= 400) { tier = "BDS / AYUSH"; college = "BDS, BAMS, BHMS options"; color = "#FFAA00"; }
   else { tier = "Qualifying Zone"; college = "Focus: cross 360+ cutoff first"; color = "#FF5588"; }
 
-  return { air2027, airLow, airHigh, percentile: percentile.toFixed(4), tier, college, color };
+  return {
+    air2027, airLow, airHigh,
+    percentile: percentile.toFixed(4),
+    tier, college, color,
+    basis: 'Planning estimate from a historical marks–rank curve; not an official NTA rank or college guarantee.',
+  };
 }
 
 export function getCollegeTierTargets() {

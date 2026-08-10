@@ -92,26 +92,32 @@ export function balancedPick(pool, count, diffOverride = null) {
 }
 
 // ── Core getter: combines PYQ + Practice + AI cache ──────────
-export function getQuestions({ subject = null, chapters = [], count = 20, difficulty = null } = {}) {
+export function getQuestions({ subject = null, chapters = [], count = 20, difficulty = null, query = '' } = {}) {
   // Build combined pool
   let pool = []
+
+  // Keep provenance on every question. Students should always know whether they
+  // are looking at a PYQ, a hand-authored practice item, or generated material.
+  const fromPYQ = q => ({ ...q, pyq: true, source: q.source || 'PYQ' })
+  const fromPractice = q => ({ ...q, pyq: false, source: q.source || 'Practice' })
+  const fromGenerated = q => ({ ...q, pyq: false, source: q.source || 'Generated' })
 
   // From PYQ bank
   let pyqPool = [...PYQ]
   if (subject)       pyqPool = pyqPool.filter(q => q.sub === subject)
   if (chapters.length) pyqPool = pyqPool.filter(q => chapters.includes(q.ch))
-  pool.push(...pyqPool)
+  pool.push(...pyqPool.map(fromPYQ))
 
-  // From practice bank
+  // From the curated NCERT practice bank
   let pracPool = [...PRACTICE]
   if (subject)       pracPool = pracPool.filter(q => q.sub === subject)
   if (chapters.length) pracPool = pracPool.filter(q => chapters.includes(q.ch))
-  pool.push(...pracPool)
+  pool.push(...pracPool.map(fromPractice))
 
   // From AI cache
   chapters.forEach(ch => {
     const cached = getCachedQuestions(ch)
-    pool.push(...cached.filter(q => !subject || q.sub === subject))
+    pool.push(...cached.filter(q => !subject || q.sub === subject).map(fromGenerated))
   })
   if (!chapters.length && subject) {
     // Get all cached for subject chapters
@@ -120,7 +126,7 @@ export function getQuestions({ subject = null, chapters = [], count = 20, diffic
       : []
     allChs.forEach(ch => {
       const cached = getCachedQuestions(ch)
-      pool.push(...cached.filter(q => q.sub === subject))
+      pool.push(...cached.filter(q => q.sub === subject).map(fromGenerated))
     })
   }
 
@@ -132,6 +138,15 @@ export function getQuestions({ subject = null, chapters = [], count = 20, diffic
     seen.add(key)
     return true
   })
+
+  // Topic/search mode is intentionally broad: it searches the question, chapter,
+  // and explanation without inventing a second, unmaintainable topic taxonomy.
+  const needle = String(query || '').trim().toLowerCase()
+  if (needle) {
+    pool = pool.filter(q => [q.q, q.ch, q.e, q.topic].some(value =>
+      String(value || '').toLowerCase().includes(needle)
+    ))
+  }
 
   if (!pool.length) return []
 
@@ -179,7 +194,7 @@ export async function generateAndCache(chapter, subject, count = 25) {
   const safeCount = Math.min(count, 28)
   const prompt = `Generate exactly ${safeCount} NEET UG practice questions for "${chapter}" (${subject}).
 
-Difficulty (STRICT — real NEET 2024 pattern):
+Difficulty (STRICT — NEET-style target distribution; verify against the latest official bulletin):
 30% easy | 50% medium | 20% hard
 
 Include 4-5 Assertion-Reasoning questions (type:"ar").
@@ -216,7 +231,8 @@ Return ONLY JSON array, no markdown:
       ch: q.ch || chapter,
       sub: q.sub || subject,
       id: `gen_${Date.now()}_${i}`,
-      pyq: false
+      pyq: false,
+      source: 'Generated'
     }))
     .filter(q => questionLooksUsable(q, chapter, subject))
 
@@ -233,6 +249,10 @@ Return ONLY JSON array, no markdown:
 
 export async function buildChapterDepth({ subject, chapter, requestedCount, targetPool = 80, maxAttempts = 3, onProgress }) {
   let lastError = null
+  if (typeof navigator !== 'undefined' && navigator.onLine === false) {
+    const available = getQuestions({ subject, chapters:[chapter], count:9999 }).length
+    return { available, target:Math.max(requestedCount, targetPool), error:'Offline — using the saved local bank.' }
+  }
   let currentPool = getQuestions({ subject, chapters: [chapter], count: 9999 })
 
   for (let attempt = 0; attempt < maxAttempts; attempt++) {

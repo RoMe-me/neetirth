@@ -1,5 +1,6 @@
-import { useState } from 'react'
-import { PYQ, SC, ICONS, CHAPTERS } from '../data/pyqBank.js'
+import { useMemo, useState } from 'react'
+import { getBookmarks, toggleBookmark } from '../lib/storage.js'
+import { PYQ, SC, ICONS } from '../data/pyqBank.js'
 
 const tag = col => ({ background:col+'18', border:`1px solid ${col}30`, color:col, borderRadius:4, padding:'2px 8px', fontSize:11, display:'inline-block', fontWeight:500 })
 
@@ -13,8 +14,10 @@ export default function PYQBank() {
   const [expanded, setExpanded] = useState(null)
   const [yearFrom, setYearFrom] = useState(2006)
   const [yearTo,   setYearTo]   = useState(2026)
+  const [savedOnly, setSavedOnly] = useState(false)
+  const [bookmarks, setBookmarks] = useState(() => getBookmarks())
 
-  const filtered = PYQ.filter(q => {
+  const filtered = useMemo(() => PYQ.filter(q => {
     if (subject !== 'All' && q.sub !== subject) return false
     if (diff !== 'All' && (q.d||q.diff) !== diff) return false
     if (yearFrom && (q.y||q.year) < yearFrom) return false
@@ -23,8 +26,9 @@ export default function PYQBank() {
       const s = search.toLowerCase()
       if (!q.q?.toLowerCase().includes(s) && !q.ch?.toLowerCase().includes(s)) return false
     }
+    if (savedOnly && !bookmarks.includes(String(q.id))) return false
     return true
-  })
+  }), [subject, diff, search, yearFrom, yearTo, savedOnly, bookmarks])
 
   const diffCol = d => d==='hard'?'var(--pink)':d==='medium'?'var(--gold)':'var(--green)'
 
@@ -36,8 +40,9 @@ export default function PYQBank() {
       <div style={{ marginBottom:28 }}>
         <div style={{ fontSize:22, fontWeight:700, marginBottom:4 }}>PYQ Bank</div>
         <div style={{ fontSize:13, color:'var(--muted)' }}>
-          {PYQ.length} real NEET questions · 2006–2026 · All chapters covered
+          {PYQ.length} PYQ-tagged questions · 2006–2026 · chapter mapped and kept separate from practice
         </div>
+        <div style={{ fontSize:11, color:'var(--dim)', marginTop:7, lineHeight:1.6 }}>Use this bank for pattern recognition. Verify any disputed answer against the official paper/key before relying on it.</div>
       </div>
 
       {/* Stats */}
@@ -98,6 +103,7 @@ export default function PYQBank() {
             <input type="number" value={yearTo} onChange={e=>setYearTo(+e.target.value)} min={2006} max={2026}
               style={{ width:56, background:'var(--surface)', border:'1px solid var(--border)', borderRadius:6, padding:'6px 8px', fontSize:12, color:'var(--text)', outline:'none', fontFamily:'var(--mono)' }}/>
           </div>
+          <button onClick={() => setSavedOnly(value => !value)} style={{ padding:'6px 11px', borderRadius:7, background:savedOnly?'var(--gold)18':'var(--surface)', border:`1px solid ${savedOnly?'var(--gold)55':'var(--border)'}`, color:savedOnly?'var(--gold)':'var(--muted)', fontSize:11, fontWeight:savedOnly?700:400 }}>★ Saved {bookmarks.length ? `(${bookmarks.length})` : ''}</button>
         </div>
         <div style={{ fontSize:11, color:'var(--dim)', marginTop:10 }}>
           Showing <span style={{ color:'var(--orange)', fontWeight:600, fontFamily:'var(--mono)' }}>{filtered.length}</span> of {PYQ.length} questions
@@ -112,7 +118,9 @@ export default function PYQBank() {
             <div>No questions match your filters. Try adjusting them.</div>
           </div>
         ) : filtered.map((q,i) => {
+          const key = String(q.id || i)
           const isOpen = expanded === (q.id||i)
+          const isSaved = bookmarks.includes(key)
           const yr = q.y||q.year
           const dc = q.d||q.diff
           return (
@@ -133,6 +141,7 @@ export default function PYQBank() {
                   </div>
                   <div style={{ fontSize:13, color:'var(--text)', lineHeight:1.65 }}>{q.q}</div>
                 </div>
+                <button aria-label={isSaved ? 'Remove from saved questions' : 'Save question for revision'} onClick={event => { event.stopPropagation(); setBookmarks(toggleBookmark(key)) }} style={{ background:isSaved?'var(--gold)16':'transparent', border:`1px solid ${isSaved?'var(--gold)45':'transparent'}`, color:isSaved?'var(--gold)':'var(--dim)', borderRadius:7, padding:'4px 7px', fontSize:14, lineHeight:1, flexShrink:0 }}>★</button>
                 <span style={{ color:'var(--dim)', fontSize:14, flexShrink:0, marginTop:2, transition:'transform 0.2s', transform:isOpen?'rotate(180deg)':'rotate(0deg)' }}>▾</span>
               </div>
 

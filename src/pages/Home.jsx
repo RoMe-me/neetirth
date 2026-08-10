@@ -90,7 +90,7 @@ const TrendChart = memo(function TrendChart({ history }) {
   )
 }) // end TrendChart memo
 
-export default function Home({ user, history, weakness, resumeInfo, onStartMock, onResume, onProgress, onPYQ }) {
+export default function Home({ user, history, weakness, resumeInfo, onStartMock, onResume, onProgress, onPYQ, onStudy }) {
   const totAns = Object.values(weakness).reduce((a,v)=>a+v.t,0)
   const totCor = Object.values(weakness).reduce((a,v)=>a+v.c,0)
   const acc    = totAns>0 ? Math.round(totCor/totAns*100) : 0
@@ -108,8 +108,12 @@ export default function Home({ user, history, weakness, resumeInfo, onStartMock,
           Good {new Date().getHours()<12?'morning':new Date().getHours()<17?'afternoon':'evening'},{' '}
           <span style={{ color:'var(--orange)' }}>{user?.name}</span>
         </div>
-        <div style={{ fontSize:13, color:'var(--muted)', marginTop:4 }}>
+          <div style={{ fontSize:13, color:'var(--muted)', marginTop:4 }}>
           NEET 2027 &nbsp;·&nbsp; {history.length===0?'Start your first mock today.':`${history.length} mock${history.length>1?'s':''} completed. Keep going.`}
+        </div>
+        <div style={{ display:'flex', gap:7, flexWrap:'wrap', marginTop:12 }}>
+          <span style={{ background:'var(--green)12', border:'1px solid var(--green)30', color:'var(--green)', borderRadius:999, padding:'4px 9px', fontSize:10 }}>✓ Progress saved offline</span>
+          <button onClick={onStudy} style={{ background:'none', border:'none', color:'var(--muted)', padding:'4px 0', fontSize:10 }}>Open Study Hub →</button>
         </div>
       </div>
 
@@ -128,7 +132,7 @@ export default function Home({ user, history, weakness, resumeInfo, onStartMock,
       )}
 
       {/* Stats */}
-      <div style={{ display:'grid', gridTemplateColumns:'repeat(3,1fr)', gap:12, marginBottom:24 }}>
+      <div className="home-stats" style={{ display:'grid', gridTemplateColumns:'repeat(3,1fr)', gap:12, marginBottom:24 }}>
         {[
           { v:history.length, l:'Mocks Given',     c:'var(--orange)' },
           { v:totAns,         l:'Questions Done',  c:'var(--blue)'   },
@@ -150,6 +154,7 @@ export default function Home({ user, history, weakness, resumeInfo, onStartMock,
         <div>
           <div style={{ fontSize:16, fontWeight:700, color:'var(--orange)', marginBottom:4 }}>Full NEET Mock — 720 Marks</div>
           <div style={{ fontSize:12, color:'var(--muted)', marginBottom:10 }}>180 Questions · Physics 45 · Chemistry 45 · Biology 90 · 3hr 20min</div>
+          <div style={{ fontSize:10, color:'var(--dim)', marginBottom:10 }}>PYQ-tagged bank · +4 / −1 · 720 marks</div>
           <div style={{ display:'flex', gap:8 }}>
             <LiquidTag color="var(--blue)">⚡ Physics</LiquidTag>
             <LiquidTag color="var(--orange)">⚗️ Chemistry</LiquidTag>
@@ -160,7 +165,7 @@ export default function Home({ user, history, weakness, resumeInfo, onStartMock,
       </div>
 
       {/* 3-col grid */}
-      <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr 1fr', gap:16 }}>
+      <div className="home-columns" style={{ display:'grid', gridTemplateColumns:'1fr 1fr 1fr', gap:16 }}>
 
         {/* Col 1 — Daily Q + Trend */}
         <div style={{ display:'flex', flexDirection:'column', gap:14 }}>
@@ -186,6 +191,7 @@ export default function Home({ user, history, weakness, resumeInfo, onStartMock,
               <div style={{ fontSize:11, color:'var(--muted)', marginBottom:8 }}>{pred.percentile}th percentile</div>
               <span style={tag(pred.color)}>{pred.tier}</span>
               <div style={{ fontSize:11, color:'var(--dim)', marginTop:10, lineHeight:1.6 }}>📌 {pred.college}</div>
+              <div style={{ fontSize:10, color:'var(--dim)', marginTop:7, lineHeight:1.45 }}>Estimate only · not an official rank or college guarantee.</div>
             </div>
           )}
           {weakTop.length>0 && (
@@ -215,10 +221,12 @@ export default function Home({ user, history, weakness, resumeInfo, onStartMock,
             <div style={{ fontSize:10, color:'var(--dim)', letterSpacing:2, marginBottom:14 }}>QUICK PRACTICE</div>
             <div style={{ display:'flex', flexDirection:'column', gap:8 }}>
               {[
-                { l:'Chapter Mock',  s:'Pick a chapter',      c:'var(--blue)',   a:()=>onStartMock({isFull:false,type:'chapter'})  },
-                { l:'Subject Mock',  s:'One full subject',    c:'var(--orange)', a:()=>onStartMock({isFull:false,type:'subject'})  },
-                { l:'My Progress',   s:'Analytics + history', c:'#AA88FF',       a:onProgress                                     },
-                { l:'PYQ Bank',      s:'Browse all questions',c:'var(--green)',  a:onPYQ                                          },
+                { l:'Chapter Mock',  s:'Pick a chapter',       c:'var(--blue)',   a:()=>onStartMock({isFull:false,type:'chapter'})  },
+                { l:'Subject Mock',  s:'One full subject',     c:'var(--orange)', a:()=>onStartMock({isFull:false,type:'subject'})  },
+                { l:'Smart Weakness Mix', s:'Target your gaps', c:'var(--pink)',  a:()=>onStartMock({isFull:false,type:'weakness'}) },
+                { l:'Study Hub',    s:'Syllabus + resources', c:'var(--violet)', a:onStudy                                        },
+                { l:'My Progress',  s:'Analytics + history',  c:'#AA88FF',       a:onProgress                                     },
+                { l:'PYQ Bank',     s:'Browse all questions', c:'var(--green)',  a:onPYQ                                          },
               ].map(({l,s,c,a})=>(
                 <button key={l} onClick={a} style={{ background:'var(--surface)', border:'1px solid var(--border)', borderRadius:8, padding:'11px 14px', display:'flex', alignItems:'center', justifyContent:'space-between', color:'var(--text)', textAlign:'left', transition:'border-color 0.15s' }}
                   onMouseEnter={e=>e.currentTarget.style.borderColor=c}

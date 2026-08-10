@@ -6,7 +6,7 @@ import {
   getQuestions, buildChapterDepth, getCacheStats, clearCache,
   getChapterAccuracy, getAdaptiveDifficulty, recordPerformance
 } from '../data/questionEngine.js'
-import { updateWeakness, getHistory, saveHistory } from '../lib/storage.js'
+import { updateWeakness, getHistory, getWeakness, saveHistory } from '../lib/storage.js'
 
 const diffCol = d => d==='hard'?'var(--pink)':d==='medium'?'var(--gold)':'var(--green)'
 const DIFFS   = ['auto','easy','medium','hard']
@@ -25,6 +25,7 @@ const QuestionCard = memo(function QuestionCard({ q, idx, onAnswered }) {
     <div className="glass glass-card" style={{ padding:'18px 22px', marginBottom:10 }}>
       <div style={{ display:'flex', gap:6, marginBottom:10, flexWrap:'wrap', alignItems:'center' }}>
         <LiquidTag color={SC[q.sub]||'#888'}>{ICONS[q.sub]} {q.sub}</LiquidTag>
+        <LiquidTag color={q.pyq ? '#AA88FF' : 'var(--blue)'}>{q.pyq ? 'PYQ' : (q.source || 'Practice')}</LiquidTag>
         <LiquidBlock fillColor={diffCol(q.d||q.diff||'medium')+'28'} fillHeight={55}
           style={{ display:'inline-flex', padding:'2px 8px', borderRadius:4, fontSize:10, fontWeight:600, color:diffCol(q.d||q.diff||'medium') }}>
           {q.d||q.diff||'medium'}
@@ -70,7 +71,7 @@ const QuestionCard = memo(function QuestionCard({ q, idx, onAnswered }) {
   )
 })
 
-export default function Practice() {
+export default function Practice({ onProgressUpdate }) {
   const [tab,      setTab]      = useState('chapters')
   const [subject,  setSubject]  = useState('Chemistry')
   const [chapter,  setChapter]  = useState('')
@@ -145,13 +146,15 @@ export default function Practice() {
     const score = c*4 - w
     const max   = t*4
     const pct   = max > 0 ? Math.round(score/max*100) : 0
-    if (chapter) updateWeakness({ [chapter]: { c, w, t, sub: subject } })
+    const nextWeakness = chapter ? updateWeakness({ [chapter]: { c, w, t, sub: subject } }) : getWeakness()
     const rec = {
       id: Date.now(), date: new Date().toISOString(),
       type: `Practice: ${chapter}`, n: t, score, max, pct,
       c, w, s: 0, offline: false, timeSpent: elapsed
     }
-    saveHistory([...getHistory(), rec])
+    const nextHistory = [...getHistory(), rec]
+    saveHistory(nextHistory)
+    onProgressUpdate?.({ history:nextHistory, weakness:nextWeakness })
     setQs([]); setAnswered({ c:0, t:0 }); setSessionStart(null); setElapsed(0)
   }
 
@@ -182,7 +185,7 @@ export default function Practice() {
       <div style={{ display:'grid', gridTemplateColumns:'repeat(4,1fr)', gap:10, marginBottom:24 }}>
         {[
           { v:stats.total + cStats.total, l:'Total Available',    c:'var(--orange)' },
-          { v:cStats.total,               l:'AI Generated',       c:'var(--blue)'   },
+          { v:cStats.total,               l:'Generated & cached',   c:'var(--blue)'   },
           { v:cStats.chapters,            l:'Chapters Unlocked',  c:'var(--green)'  },
           { v:arQs.length,               l:'A-R Questions',      c:'#AA88FF'       },
         ].map(s => (

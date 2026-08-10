@@ -1,3 +1,4 @@
+import { useState } from 'react'
 import { predictAIR } from '../lib/airPredictor.js'
 import { SC, ICONS } from '../data/pyqBank.js'
 
@@ -7,11 +8,40 @@ export default function Results({ user, results, history, onNewMock, onProgress 
   const { c, w, s, score, max, pct, wQs, cm } = results
   const qs = results.qs || []
   const scoreCol = pct>=60?'var(--green)':pct>=40?'var(--gold)':'var(--pink)'
+  const cardScoreColor = pct>=60 ? '#18e7b6' : pct>=40 ? '#ffc145' : '#ff5da2'
   const pred = predictAIR(score)
   const prev = history.slice(0,-1)
   const prevBest = prev.length>0 ? Math.max(...prev.map(m=>m.pct)) : null
   const subBreak = {Chemistry:{c:0,t:0},Physics:{c:0,t:0},Biology:{c:0,t:0}}
   Object.entries(cm).forEach(([,d])=>{ if(subBreak[d.sub]){subBreak[d.sub].c+=d.c;subBreak[d.sub].t+=d.t} })
+  const [shareState, setShareState] = useState('Share score')
+  const subjectLine = Object.entries(subBreak).filter(([,data]) => data.t > 0).map(([name, data]) => `${name.slice(0,3)} ${Math.round(data.c / data.t * 100)}%`).join(' · ')
+  const shareText = `Neetirth | ${user?.name || 'Student'}\nScore: ${score}/${max} | Predicted AIR: ${pred.airLow.toLocaleString()}–${pred.airHigh.toLocaleString()}\n${subjectLine}\n#NEET2027 #Neetirth`
+
+  const shareScore = async () => {
+    try {
+      if (navigator.share) {
+        await navigator.share({ title:'My Neetirth result', text:shareText })
+        setShareState('Shared ✓')
+      } else if (navigator.clipboard?.writeText) {
+        await navigator.clipboard.writeText(shareText)
+        setShareState('Copied ✓')
+      } else {
+        const area = document.createElement('textarea')
+        area.value = shareText; area.style.position = 'fixed'; area.style.opacity = '0'
+        document.body.appendChild(area); area.select(); document.execCommand('copy'); area.remove()
+        setShareState('Copied ✓')
+      }
+    } catch { setShareState('Copy score') }
+    setTimeout(() => setShareState('Share score'), 2200)
+  }
+
+  const downloadCard = () => {
+    const safe = value => String(value).replace(/[&<>"']/g, char => ({ '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;', "'":'&apos;' }[char]))
+    const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="630" viewBox="0 0 1200 630"><rect width="1200" height="630" fill="#111114"/><circle cx="1050" cy="-30" r="280" fill="#ff7a1a" opacity=".18"/><circle cx="100" cy="680" r="250" fill="#64aeff" opacity=".12"/><text x="72" y="86" fill="#ff7a1a" font-family="Arial" font-size="24" font-weight="700" letter-spacing="5">NEETIRTH</text><text x="72" y="170" fill="#f7f7fb" font-family="Arial" font-size="34" font-weight="700">${safe(user?.name || 'Student')}’s mock result</text><text x="72" y="315" fill="${cardScoreColor}" font-family="monospace" font-size="140" font-weight="800">${score}</text><text x="82" y="365" fill="#a4a4ac" font-family="Arial" font-size="22">out of ${max} · ${pct}%</text><text x="720" y="225" fill="#a4a4ac" font-family="Arial" font-size="20">PREDICTED AIR</text><text x="720" y="275" fill="#ffc145" font-family="monospace" font-size="42" font-weight="700">${pred.airLow.toLocaleString()}–${pred.airHigh.toLocaleString()}</text><text x="720" y="350" fill="#f7f7fb" font-family="Arial" font-size="24">${safe(pred.tier)}</text><text x="72" y="520" fill="#a4a4ac" font-family="Arial" font-size="20">${safe(subjectLine)}</text><text x="72" y="575" fill="#66666e" font-family="Arial" font-size="16">Practice deliberately · #NEET2027 #Neetirth</text></svg>`
+    const url = URL.createObjectURL(new Blob([svg], { type:'image/svg+xml' }))
+    const link = document.createElement('a'); link.href = url; link.download = `neetirth-result-${score}.svg`; link.click(); URL.revokeObjectURL(url)
+  }
 
   return (
     <div className="page-in" style={{ padding:'32px 36px', maxWidth:820, margin:'0 auto' }}>
@@ -23,9 +53,11 @@ export default function Results({ user, results, history, onNewMock, onProgress 
           <div style={{ fontSize:22, fontWeight:700 }}>Mock Results</div>
           <div style={{ fontSize:12, color:'var(--muted)', marginTop:3 }}>{new Date().toLocaleDateString('en-IN',{weekday:'long',day:'2-digit',month:'long',year:'numeric'})}</div>
         </div>
-        <div style={{ display:'flex', gap:10 }}>
-          <button onClick={onProgress} style={{ background:'var(--card)', border:'1px solid var(--border)', color:'var(--text)', borderRadius:8, padding:'8px 16px', fontSize:13, fontWeight:500 }}>View Progress</button>
-          <button onClick={onNewMock} style={{ background:'var(--orange)', border:'none', color:'#fff', borderRadius:8, padding:'8px 18px', fontSize:13, fontWeight:600 }}>New Mock →</button>
+        <div style={{ display:'flex', gap:8, flexWrap:'wrap', justifyContent:'flex-end' }}>
+          <button onClick={shareScore} style={{ background:'var(--card)', border:'1px solid var(--border)', color:'var(--text)', borderRadius:8, padding:'8px 12px', fontSize:12, fontWeight:600 }}>{shareState}</button>
+          <button onClick={downloadCard} style={{ background:'var(--card)', border:'1px solid var(--border)', color:'var(--muted)', borderRadius:8, padding:'8px 12px', fontSize:12 }}>Download card</button>
+          <button onClick={onProgress} style={{ background:'var(--card)', border:'1px solid var(--border)', color:'var(--text)', borderRadius:8, padding:'8px 12px', fontSize:12, fontWeight:500 }}>View Progress</button>
+          <button onClick={onNewMock} style={{ background:'var(--orange)', border:'none', color:'#fff', borderRadius:8, padding:'8px 14px', fontSize:12, fontWeight:700 }}>New Mock →</button>
         </div>
       </div>
 
@@ -49,16 +81,17 @@ export default function Results({ user, results, history, onNewMock, onProgress 
       </div>
 
       {/* AIR + Subject in grid */}
-      <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:14, marginBottom:20 }}>
+      <div className="results-top-grid" style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:14, marginBottom:20 }}>
         {/* AIR */}
         <div style={{ background:'var(--card)', border:`1px solid ${pred.color}25`, borderRadius:12, padding:'20px 24px' }}>
-          <div style={{ fontSize:10, color:'var(--dim)', letterSpacing:2, marginBottom:14 }}>AIR PREDICTION — NEET 2027</div>
+          <div style={{ fontSize:10, color:'var(--dim)', letterSpacing:2, marginBottom:14 }}>PLANNING ESTIMATE — NEET 2027</div>
           <div style={{ fontSize:26, fontWeight:800, color:pred.color, fontFamily:'var(--mono)', marginBottom:4 }}>
             {pred.airLow.toLocaleString()}–{pred.airHigh.toLocaleString()}
           </div>
           <div style={{ fontSize:12, color:'var(--muted)', marginBottom:10 }}>{pred.percentile}th percentile</div>
           <span style={tag(pred.color)}>{pred.tier}</span>
           <div style={{ fontSize:11, color:'var(--dim)', marginTop:10, lineHeight:1.6 }}>📌 {pred.college}</div>
+          <div style={{ fontSize:10, color:'var(--dim)', marginTop:8, lineHeight:1.5 }}>{pred.basis}</div>
         </div>
 
         {/* Subject breakdown */}
