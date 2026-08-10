@@ -1,8 +1,10 @@
 import { useState } from 'react'
 import { setUser } from '../lib/storage.js'
+import { getContentStats } from '../lib/contentAudit.js'
 
 export default function Landing({ onEnter }) {
   const [name, setName] = useState('')
+  const content = getContentStats()
   const [err, setErr] = useState('')
 
   const enter = () => {
@@ -37,8 +39,8 @@ export default function Landing({ onEnter }) {
             begins here.
           </div>
           <div style={{ fontSize:14, color:'var(--muted)', lineHeight:1.8, marginBottom:32 }}>
-            Real PYQs from 2006 to 2026.<br/>
-            Free. No login. No payment. Ever.
+            PYQ-tagged questions + NCERT practice.<br/>
+            Free. Offline-first. No payment wall.
           </div>
           <div style={{ fontSize:12, fontStyle:'italic', color:'var(--dim)', borderLeft:'2px solid var(--orange)', paddingLeft:12 }}>
             "उद्यमेन हि सिध्यन्ति कार्याणि"<br/>
@@ -46,7 +48,7 @@ export default function Landing({ onEnter }) {
           </div>
         </div>
         <div style={{ display:'flex', gap:24 }}>
-          {[['261+','Real PYQs'],['86','Chapters'],['720','Max Marks']].map(([n,l])=>(
+          {[[content.pyq.toLocaleString(),'PYQ-tagged'],[content.chapters,'Chapters'],['720','Max Marks']].map(([n,l])=>(
             <div key={l}>
               <div style={{ fontSize:20, fontWeight:800, color:'var(--orange)', fontFamily:'var(--mono)' }}>{n}</div>
               <div style={{ fontSize:10, color:'var(--dim)', marginTop:2 }}>{l}</div>

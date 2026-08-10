@@ -14,7 +14,7 @@ const btn = (col='#FF6B00', full=false) => ({
   fontFamily:'inherit', fontSize:13, fontWeight:600, width:full?'100%':'auto'
 })
 
-export default function Exam({ user, examData, resumeInfo, onFinish, onHome }) {
+export default function Exam({ user, examData, resumeInfo, onFinish, onSaveResume, onHome }) {
   // Fresh examData ALWAYS wins when a new mock was just started — never let a
   // stale/abandoned resume silently hijack a brand-new mock the user just picked.
   // Resume is only used as a fallback (e.g. reopening the app later via Home's
@@ -65,6 +65,8 @@ export default function Exam({ user, examData, resumeInfo, onFinish, onHome }) {
   const [showSubmit, setShowSubmit] = useState(false)
   const timerRef    = useRef(null)
   const autoSaveRef = useRef(null)
+  const submitRef   = useRef(false)
+  const snapshotRef = useRef(null)
   const timeMap     = useRef({})        // { questionIndex: totalSeconds }
   const qStartTime  = useRef(Date.now()) // when current Q was last opened
 
@@ -88,30 +90,35 @@ export default function Exam({ user, examData, resumeInfo, onFinish, onHome }) {
     setCur(newIdx)
   }
 
-  // Timer
+  // Timer: create one interval per pause/resume, not one new interval per
+  // second. The previous dependency on timeLeft caused unnecessary work and
+  // made timer behaviour harder to reason about.
   useEffect(() => {
+    clearInterval(timerRef.current)
     if (!paused && timeLeft > 0) {
-      timerRef.current = setInterval(() => setTime(t => t - 1), 1000)
-    } else {
-      clearInterval(timerRef.current)
+      timerRef.current = setInterval(() => setTime(value => Math.max(0, value - 1)), 1000)
     }
     return () => clearInterval(timerRef.current)
-  }, [paused, timeLeft])
+  }, [paused])
 
-  useEffect(() => { if (timeLeft <= 0) doSubmit() }, [timeLeft])
+  useEffect(() => { if (timeLeft <= 0 && !submitRef.current) doSubmit() }, [timeLeft])
 
-  // Auto-save every 15s
+  // Keep the latest state in a ref, then persist at a calm 15-second cadence.
+  // This protects mobile devices from a localStorage write every timer tick.
   useEffect(() => {
-    autoSaveRef.current = setInterval(() => {
-      saveResume({
-        qs, ans, marked: [...marked], cur, timeLeft, cfg,
-        savedAt: new Date().toISOString()
-      })
-    }, 15000)
-    return () => clearInterval(autoSaveRef.current)
-  }, [ans, marked, cur, timeLeft])
+    snapshotRef.current = { qs, ans, marked:[...marked], cur, timeLeft, cfg, savedAt:new Date().toISOString() }
+  }, [qs, ans, marked, cur, timeLeft, cfg])
+
+  useEffect(() => {
+    const persist = () => { if (snapshotRef.current && !submitRef.current) saveResume(snapshotRef.current) }
+    autoSaveRef.current = setInterval(persist, 15000)
+    window.addEventListener('beforeunload', persist)
+    return () => { clearInterval(autoSaveRef.current); window.removeEventListener('beforeunload', persist) }
+  }, [qs])
 
   const doSubmit = () => {
+    if (submitRef.current) return
+    submitRef.current = true
     clearInterval(timerRef.current)
     clearInterval(autoSaveRef.current)
     recordTime(cur) // record time on last viewed question
@@ -143,13 +150,28 @@ export default function Exam({ user, examData, resumeInfo, onFinish, onHome }) {
   }
 
   const saveAndGoHome = () => {
+    if (submitRef.current) return
     clearInterval(timerRef.current)
     recordTime(cur)
-    saveResume({ qs, ans, marked:[...marked], cur, timeLeft, cfg, savedAt:new Date().toISOString() })
+    const resume = { qs, ans, marked:[...marked], cur, timeLeft, cfg, savedAt:new Date().toISOString() }
+    saveResume(resume)
+    onSaveResume?.(resume)
     onHome()
   }
 
   const q = qs[cur]
+  if (!q) {
+    return (
+      <div style={{ minHeight:'100vh', display:'grid', placeItems:'center', background:'var(--bg)', color:'var(--text)', padding:24, textAlign:'center' }}>
+        <div>
+          <div style={{ fontSize:36, marginBottom:12 }}>⚠️</div>
+          <div style={{ fontWeight:700, marginBottom:6 }}>This mock could not be opened</div>
+          <div style={{ color:'var(--muted)', fontSize:12, marginBottom:16 }}>No valid questions were found. Your saved progress was not changed.</div>
+          <button onClick={onHome} style={{ background:'var(--orange)', color:'#fff', border:0, borderRadius:9, padding:'10px 18px', fontWeight:700 }}>Back to dashboard</button>
+        </div>
+      </div>
+    )
+  }
   const answered = Object.keys(ans).length
   const liveScore = Object.keys(ans).filter(i => ans[i] === qs[+i]?.correct).length * 4
     - Object.keys(ans).filter(i => ans[i] && ans[i] !== qs[+i]?.correct).length
@@ -163,7 +185,7 @@ export default function Exam({ user, examData, resumeInfo, onFinish, onHome }) {
   ].filter(s => s.start < qs.length) : []
 
   return (
-    <div className="page-in" style={{ height:'100vh', display:'grid', gridTemplateRows:'52px 1fr 50px', background:'var(--bg)', color:T.text, fontFamily:"'Segoe UI',system-ui,sans-serif", overflow:'hidden' }}>
+    <div className="page-in exam-shell" style={{ height:'100vh', display:'grid', gridTemplateRows:'52px 1fr 50px', background:'var(--bg)', color:T.text, fontFamily:"'Segoe UI',system-ui,sans-serif", overflow:'hidden' }}>
       <style>{`*{box-sizing:border-box} button:hover{filter:brightness(1.2)} ::-webkit-scrollbar{width:4px} ::-webkit-scrollbar-thumb{background:#2A2A40}`}</style>
 
       {/* ── TOP BAR ── */}
@@ -198,10 +220,10 @@ export default function Exam({ user, examData, resumeInfo, onFinish, onHome }) {
       </div>
 
       {/* ── MAIN ── */}
-      <div style={{ display:'grid', gridTemplateColumns:'1fr 220px', overflow:'hidden' }}>
+      <div className="exam-main" style={{ display:'grid', gridTemplateColumns:'1fr 220px', overflow:'hidden' }}>
 
         {/* Question panel */}
-        <div style={{ padding:20, overflowY:'auto' }}>
+        <div className="exam-question" style={{ padding:20, overflowY:'auto' }}>
           {paused ? (
             <div style={{ height:'100%', display:'flex', flexDirection:'column', alignItems:'center', justifyContent:'center', gap:16, color:T.muted }}>
               <div style={{ fontSize:56 }}>⏸</div>
@@ -221,7 +243,9 @@ export default function Exam({ user, examData, resumeInfo, onFinish, onHome }) {
               <div style={{ display:'flex', gap:6, marginBottom:14, flexWrap:'wrap' }}>
                 <span style={{ background:(SC[q.subject]||'#888')+'20', border:`1px solid ${SC[q.subject]||'#888'}44`, color:SC[q.subject]||'#888', borderRadius:4, padding:'2px 8px', fontSize:11 }}>{q.subject}</span>
                 <span style={{ background:(q.difficulty==='hard'?T.pink:q.difficulty==='medium'?'#FFAA00':T.green)+'20', border:`1px solid ${q.difficulty==='hard'?T.pink:q.difficulty==='medium'?'#FFAA00':T.green}44`, color:q.difficulty==='hard'?T.pink:q.difficulty==='medium'?'#FFAA00':T.green, borderRadius:4, padding:'2px 8px', fontSize:11 }}>{q.difficulty}</span>
-                {q.pyq && <span style={{ background:'#AA88FF20', border:'1px solid #AA88FF44', color:'#AA88FF', borderRadius:4, padding:'2px 8px', fontSize:11 }}>PYQ {q.year||''}</span>}
+                {q.pyq
+                  ? <span style={{ background:'#AA88FF20', border:'1px solid #AA88FF44', color:'#AA88FF', borderRadius:4, padding:'2px 8px', fontSize:11 }}>PYQ {q.year||''}</span>
+                  : <span style={{ background:'#64AEFF14', border:'1px solid #64AEFF38', color:'var(--blue)', borderRadius:4, padding:'2px 8px', fontSize:11 }}>{q.source || 'Practice'}</span>}
                 <span style={{ color:T.dim, fontSize:11, alignSelf:'center' }}>{q.chapter}</span>
               </div>
 
@@ -253,7 +277,7 @@ export default function Exam({ user, examData, resumeInfo, onFinish, onHome }) {
         </div>
 
         {/* Sidebar palette */}
-        <div style={{ borderLeft:'1px solid #1E1E30', background:'#0D0D18', padding:12, overflowY:'auto' }}>
+        <div className="exam-palette" style={{ borderLeft:'1px solid #1E1E30', background:'#0D0D18', padding:12, overflowY:'auto' }}>
           {cfg?.isFull ? (
             sections.map(sec => (
               <div key={sec.label} style={{ marginBottom:12 }}>

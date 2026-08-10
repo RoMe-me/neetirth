@@ -88,7 +88,7 @@ export default function Progress({ user, history, weakness, onBack, onClear }) {
       </div>
 
       {/* Stats row */}
-      <div style={{ display:'grid', gridTemplateColumns:'repeat(4,1fr)', gap:12, marginBottom:24 }}>
+      <div className="progress-stats" style={{ display:'grid', gridTemplateColumns:'repeat(4,1fr)', gap:12, marginBottom:24 }}>
         {[
           { v:history.length,          l:'Mocks',       c:'var(--orange)' },
           { v:overallAcc>0?overallAcc+'%':'—', l:'Accuracy', c:overallAcc>=60?'var(--green)':overallAcc>=40?'var(--gold)':'var(--pink)' },

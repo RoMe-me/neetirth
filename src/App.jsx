@@ -1,5 +1,4 @@
 import { useState, useEffect, Component } from 'react'
-import { Analytics } from '@vercel/analytics/react'
 import Layout from './components/Layout.jsx'
 import Landing from './pages/Landing.jsx'
 import Home from './pages/Home.jsx'
@@ -10,6 +9,7 @@ import Progress from './pages/Progress.jsx'
 import PYQBank from './pages/PYQBank.jsx'
 import Practice from './pages/Practice.jsx'
 import AskAI from './pages/AskAI.jsx'
+import StudyHub from './pages/StudyHub.jsx'
 import { getUser, getHistory, getWeakness, getResume, clearResume } from './lib/storage.js'
 
 // Catches ANY render crash anywhere in the app and shows a clear, recoverable
@@ -72,6 +72,7 @@ function AppInner() {
     if(id==='pyq')      nav('pyq')
     if(id==='practice') nav('practice')
     if(id==='ask')      nav('ask')
+    if(id==='study')    nav('study')
   }
 
   // Loading
@@ -86,7 +87,6 @@ function AppInner() {
   if(page==='landing') return (
     <>
       <Landing onEnter={u => { setUser(u); nav('home') }}/>
-      <Analytics />
     </>
   )
 
@@ -95,10 +95,10 @@ function AppInner() {
     <>
       <Exam
         user={user} examData={examData||null} resumeInfo={resumeInfo}
-        onFinish={(r,newH,newW) => { setResults(r); setHistory(newH); setWeakness(newW); setResumeInfo(null); nav('results') }}
-        onHome={() => nav('home')}
+        onFinish={(r,newH,newW) => { setResults(r); setHistory(newH); setWeakness(newW); setResumeInfo(null); setExamData(null); nav('results') }}
+        onSaveResume={r => setResumeInfo(r)}
+        onHome={() => { setExamData(null); nav('home') }}
       />
-      <Analytics />
     </>
   )
 
@@ -112,12 +112,13 @@ function AppInner() {
           onResume={() => nav('exam')}
           onProgress={() => nav('progress')}
           onPYQ={() => nav('pyq')}
+          onStudy={() => nav('study')}
           onLogout={() => { setUser(null); nav('landing') }}
         />
       )}
       {page==='mockSetup' && (
         <MockSetup
-          user={user} initialCfg={mockConfig}
+          user={user} initialCfg={mockConfig} weakness={weakness}
           onStart={data => { setExamData(data); nav('exam') }}
           onBack={() => nav('home')}
         />
@@ -137,9 +138,9 @@ function AppInner() {
         />
       )}
       {page==='pyq' && <PYQBank/>}
-      {page==='practice' && <Practice/>}
+      {page==='practice' && <Practice onProgressUpdate={({ history:nextHistory, weakness:nextWeakness }) => { setHistory(nextHistory); setWeakness(nextWeakness) }} />}
       {page==='ask' && <AskAI/>}
-      <Analytics />
+      {page==='study' && <StudyHub onStartMock={cfg => { setMockConfig(cfg); nav('mockSetup') }} onPYQ={() => nav('pyq')} onAsk={() => nav('ask')} />}
     </Layout>
   )
 }

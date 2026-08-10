@@ -24,16 +24,23 @@ neetirth/
 │   ├── main.jsx                 ← React entry point
 │   ├── pages/
 │   │   ├── Landing.jsx          ← Username entry page
-│   │   ├── Home.jsx             ← Dashboard with AIR card
-│   │   ├── MockSetup.jsx        ← Full/Subject/Chapter mock setup
-│   │   ├── Exam.jsx             ← Exam room (timer, palette, submit)
-│   │   ├── Results.jsx          ← Score + AIR prediction + review
-│   │   └── Progress.jsx         ← History + weakness tracker
+│   │   ├── Home.jsx             ← Dashboard with AIR card + quick actions
+│   │   ├── StudyHub.jsx         ← Syllabus map + official free resources
+│   │   ├── MockSetup.jsx        ← Full/Subject/Chapter/Topic/Weakness setup
+│   │   ├── Exam.jsx             ← Exam room (timer, palette, submit, resume)
+│   │   ├── Results.jsx          ← Score + AIR + time analytics + share card
+│   │   ├── Progress.jsx         ← History + weakness tracker
+│   │   ├── PYQBank.jsx          ← Search, filters and saved revision list
+│   │   ├── Practice.jsx         ← NCERT practice + adaptive cache
+│   │   └── AskAI.jsx            ← Text and image doubt solver
 │   ├── lib/
-│   │   ├── storage.js           ← localStorage (prefix: neetirth_)
-│   │   └── airPredictor.js      ← NTA 2025 calibrated AIR formula
+│   │   ├── storage.js           ← defensive localStorage (prefix: neetirth_)
+│   │   ├── contentAudit.js      ← data integrity + coverage audit
+│   │   └── airPredictor.js      ← clearly labelled estimate, not counselling advice
 │   └── data/
-│       └── pyqBank.js           ← 261 PYQs (2006–2026) + all functions
+│       ├── pyqBank.js           ← 261 PYQ-tagged items + syllabus map
+│       ├── practiceBank.js      ← 225 NCERT-based practice items
+│       └── studyData.js         ← official/free study links + routines
 ├── api/
 │   └── generate.js              ← Vercel serverless (Anthropic proxy)
 ├── index.html
@@ -62,10 +69,10 @@ neetirth/
 
 ## 🗃 QUESTION BANK (pyqBank.js)
 
-- **Total questions: 261** (as of June 2026)
-- Chemistry: 71Q | Physics: 69Q | Biology: 121Q
-- Source: Real NEET PYQs 2006–2026
-- All 86 NEET syllabus chapters covered
+- **PYQ-tagged items: 261** (Chemistry: 70 | Physics: 70 | Biology: 121)
+- **NCERT-based practice items: 225** (separate bank; never presented as a PYQ)
+- Coverage: 85 unique chapter names / 87 subject mappings in the current syllabus map, with local counts shown before a chapter drill
+- Provenance note: only use PYQ-labelled items as pattern practice and verify disputed questions against the official paper/key; generated content is always labelled
 - Format inside file:
 ```js
 {id:"c1", y:2006, q:"Question text",
@@ -143,6 +150,7 @@ All user data is stored in **browser localStorage** with prefix `neetirth_`:
 | `neetirth_history` | All mock attempts + scores |
 | `neetirth_weakness` | Chapter-wise accuracy |
 | `neetirth_resume` | Unfinished mock (auto-save) |
+| `neetirth_bookmarks` | Saved PYQs for revision |
 
 ⚠️ **Important**: Data is per-device, per-browser. If user clears browser data, their history is lost.
 Phase 2 plan: Supabase database for cloud sync.
@@ -169,22 +177,27 @@ Formula in `src/lib/airPredictor.js` — update annually after NTA releases resu
 ## 📅 ROADMAP
 
 ### Phase 1 (Done ✅)
-- Full 180Q / 720 marks NEET mock
-- Chapter-wise + subject-wise practice
-- AIR prediction (NTA 2025 calibrated)
-- Resume + auto-save
-- Weakness tracker
-- Score trend graph
-- 261 real PYQs across all chapters
+- Full 180Q / 720 marks NEET mock (45 + 45 + 90)
+- Subject, chapter, topic and smart weakness drills
+- PYQ bank with year/difficulty/search filters and saved revision list
+- NCERT-based practice bank with adaptive difficulty and online cache
+- AIR estimate clearly labelled as an estimate
+- Pause, safe resume, auto-save and defensive local storage
+- Time-per-question analytics and shareable result card
+- Study Hub with official NTA/NMC/NCERT links
+- Ask AI text + question-photo solver (requires the user's own API key)
+- Installable offline shell for local mocks, PYQs and progress
 
 ### Phase 2 (Next)
-- Supabase leaderboard (compare with other users)
-- Real-time rank among users who gave same mock
-- Cloud sync (history across devices)
+- Supabase leaderboard with explicit consent and anonymous IDs
+- Cloud sync as an opt-in feature (never replace local data silently)
+- Larger reviewed question packs with source/license metadata
+- Community reporting and answer-review workflow
 
 ### Phase 3
-- Ask AI page (type or photo a question → instant answer)
-- Anthropic vision API for image questions
+- Spaced-revision calendar and notification reminders
+- Topic-level NCERT line mapping
+- Separate, fully researched JEE course (do not show as active until its syllabus/data is ready)
 
 ---
 
@@ -230,7 +243,7 @@ Always give Claude the GitHub classic token when it needs to push code.
 
 ---
 
-*Last updated: June 2026 | Platform: Neetirth | Built for every NEET 2027 aspirant*
+*Last updated: August 2026 | Platform: Neetirth | Built for NEET aspirants*
 
 <!-- redeploy: force fresh env var pickup -->
 
