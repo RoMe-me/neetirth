@@ -1,4 +1,4 @@
-import { useState, useEffect, Component } from 'react'
+import { useState, useEffect, Component, lazy, Suspense } from 'react'
 import Layout from './components/Layout.jsx'
 import Landing from './pages/Landing.jsx'
 import Home from './pages/Home.jsx'
@@ -11,6 +11,10 @@ import Practice from './pages/Practice.jsx'
 import AskAI from './pages/AskAI.jsx'
 import StudyHub from './pages/StudyHub.jsx'
 import { getUser, getHistory, getWeakness, getResume, clearResume } from './lib/storage.js'
+
+// Admin dashboard is lazy-loaded so its Supabase dependency doesn't bloat the
+// main bundle. It is also access-gated internally via Supabase RLS.
+const Admin = lazy(() => import('./pages/Admin.jsx'))
 
 // Catches ANY render crash anywhere in the app and shows a clear, recoverable
 // error screen instead of a silent blank page. This is the permanent fix for
@@ -60,7 +64,14 @@ function AppInner() {
     if(h) setHistory(h)
     if(w) setWeakness(w)
     if(r && r.qs?.length>0) setResumeInfo(r)
-    setPage(u ? 'home' : 'landing')
+
+    // Route to admin page if URL path is /admin
+    const path = window.location.pathname
+    if (path === '/admin' || path === '/admin/') {
+      setPage('admin')
+    } else {
+      setPage(u ? 'home' : 'landing')
+    }
   }, [])
 
   const nav = p => setPage(p)
@@ -81,6 +92,17 @@ function AppInner() {
       <div style={{ fontSize:28, fontWeight:800, color:'var(--orange)', letterSpacing:2 }}>नीतीर्थ</div>
       <div style={{ fontSize:11, color:'var(--dim)', letterSpacing:4 }}>LOADING…</div>
     </div>
+  )
+
+  // Admin — standalone page (no sidebar), access-gated internally
+  if(page==='admin') return (
+    <Suspense fallback={
+      <div style={{ height:'100vh', background:'var(--bg)', display:'flex', alignItems:'center', justifyContent:'center' }}>
+        <div style={{ color:'var(--muted)', fontSize:13 }}>Loading admin…</div>
+      </div>
+    }>
+      <Admin />
+    </Suspense>
   )
 
   // Landing — no sidebar

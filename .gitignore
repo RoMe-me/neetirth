@@ -1,6 +1,5 @@
 # Dependencies
 node_modules/
-package-lock.json
 yarn.lock
 
 
@@ -13,6 +12,9 @@ build/
 .env
 .env.local
 .env.*.local
+
+# Vercel local config (contains project secrets)
+.vercel/
 
 # IDE
 .vscode/
