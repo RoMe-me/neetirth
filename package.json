@@ -6,7 +6,8 @@
     "dev": "vite",
     "build": "vite build",
     "audit": "node --experimental-default-type=module scripts/audit-data.mjs",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "check": "npm run audit && npm run build"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.39.0",
