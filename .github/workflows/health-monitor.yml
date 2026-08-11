@@ -1,0 +1,74 @@
+# Neetirth health monitor — pings the live site every 6 hours
+name: Health Monitor
+
+on:
+  schedule:
+    - cron: '0 */6 * * *'
+  workflow_dispatch:
+
+concurrency:
+  group: health-monitor
+  cancel-in-progress: true
+
+jobs:
+  health-check:
+    name: Site health check
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Check site availability
+        id: ping
+        run: |
+          URL="${{ vars.SITE_URL || 'https://neetirth.vercel.app' }}"
+          echo "Checking $URL"
+          HTTP_CODE=$(curl -s -o /tmp/response.html -w "%{http_code}" --max-time 30 "$URL" || echo "000")
+          echo "http_code=$HTTP_CODE" >> "$GITHUB_OUTPUT"
+          if [ "$HTTP_CODE" != "200" ]; then
+            echo "::error::Site returned HTTP $HTTP_CODE"
+            echo "healthy=false" >> "$GITHUB_OUTPUT"
+            exit 1
+          fi
+          if grep -q 'id="root"' /tmp/response.html; then
+            echo "✅ Site is healthy (HTTP $HTTP_CODE, root mount found)"
+            echo "healthy=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "::error::Site returned 200 but root mount is missing"
+            echo "healthy=false" >> "$GITHUB_OUTPUT"
+            exit 1
+          fi
+
+      - name: Check API endpoint (if available)
+        if: always() && steps.ping.outputs.healthy == 'true'
+        run: |
+          URL="${{ vars.SITE_URL || 'https://neetirth.vercel.app' }}"
+          API_STATUS=$(curl -s -o /dev/null -w "%{http_code}" --max-time 15 "$URL/api/health" || echo "000")
+          echo "API /api/health status: $API_STATUS"
+          if [ "$API_STATUS" != "200" ] && [ "$API_STATUS" != "404" ]; then
+            echo "::warning::API health endpoint returned $API_STATUS"
+          fi
+
+      - name: Send failure notification
+        if: failure() && env.HEALTH_WEBHOOK != ''
+        env:
+          HEALTH_WEBHOOK: ${{ secrets.HEALTH_WEBHOOK }}
+        run: |
+          URL="${{ vars.SITE_URL || 'https://neetirth.vercel.app' }}"
+          HTTP_CODE="${{ steps.ping.outputs.http_code || 'unknown' }}"
+          curl -s -X POST "$HEALTH_WEBHOOK" \
+            -H "Content-Type: application/json" \
+            -d "{\"content\": \"🚨 **Neetirth Health Alert**\nSite: $URL\nHTTP: $HTTP_CODE\nRun: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}\"}" \
+            || true
+
+      - name: Report summary
+        if: always()
+        run: |
+          URL="${{ vars.SITE_URL || 'https://neetirth.vercel.app' }}"
+          HEALTHY="${{ steps.ping.outputs.healthy || 'false' }}"
+          HTTP_CODE="${{ steps.ping.outputs.http_code || 'unknown' }}"
+          echo "## 🏥 Health Check Summary" >> "$GITHUB_STEP_SUMMARY"
+          echo "| Check | Result |" >> "$GITHUB_STEP_SUMMARY"
+          echo "|-------|--------|" >> "$GITHUB_STEP_SUMMARY"
+          echo "| Site URL | $URL |" >> "$GITHUB_STEP_SUMMARY"
+          echo "| HTTP Status | $HTTP_CODE |" >> "$GITHUB_STEP_SUMMARY"
+          echo "| Healthy | $HEALTHY |" >> "$GITHUB_STEP_SUMMARY"
+          echo "| Timestamp | $(date -u '+%Y-%m-%d %H:%M:%S UTC') |" >> "$GITHUB_STEP_SUMMARY"
