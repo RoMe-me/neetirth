@@ -287,9 +287,9 @@ export default function Exam({ user, examData, resumeInfo, onFinish, onSaveResum
                     const i = sec.start + j
                     const c = qColor(i)
                     return (
-                      <div key={i} onClick={() => navigateTo(i)} style={{ width:22, height:22, borderRadius:4, border:`1px solid ${c}`, background:c+'20', color:i===cur?T.text:T.muted, display:'flex', alignItems:'center', justifyContent:'center', fontSize:9, cursor:'pointer', fontWeight:i===cur?'700':'normal' }}>
+                      <button key={i} type="button" onClick={() => navigateTo(i)} aria-label={`Go to question ${i + 1}`} aria-current={i === cur ? 'step' : undefined} style={{ width:22, height:22, borderRadius:4, border:`1px solid ${c}`, background:c+'20', color:i===cur?T.text:T.muted, display:'flex', alignItems:'center', justifyContent:'center', fontSize:9, cursor:'pointer', fontWeight:i===cur?'700':'normal', padding:0 }}>
                         {i+1}
-                      </div>
+                      </button>
                     )
                   })}
                 </div>
@@ -302,9 +302,9 @@ export default function Exam({ user, examData, resumeInfo, onFinish, onSaveResum
                 {qs.map((_, i) => {
                   const c = qColor(i)
                   return (
-                    <div key={i} onClick={() => navigateTo(i)} style={{ width:28, height:28, borderRadius:5, border:`1px solid ${c}`, background:c+'20', color:i===cur?T.text:T.muted, display:'flex', alignItems:'center', justifyContent:'center', fontSize:10, cursor:'pointer', fontWeight:i===cur?'700':'normal' }}>
+                    <button key={i} type="button" onClick={() => navigateTo(i)} aria-label={`Go to question ${i + 1}`} aria-current={i === cur ? 'step' : undefined} style={{ width:28, height:28, borderRadius:5, border:`1px solid ${c}`, background:c+'20', color:i===cur?T.text:T.muted, display:'flex', alignItems:'center', justifyContent:'center', fontSize:10, cursor:'pointer', fontWeight:i===cur?'700':'normal', padding:0 }}>
                       {i+1}
-                    </div>
+                    </button>
                   )
                 })}
               </div>

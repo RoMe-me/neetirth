@@ -37,11 +37,11 @@ const DailyQuestion = memo(function DailyQuestion() {
           if (revealed && isCorrect) { bg='var(--green)10'; border='var(--green)40'; color='var(--green)' }
           if (revealed && isSel && !isCorrect) { bg='var(--pink)10'; border='var(--pink)40'; color='var(--pink)' }
           return (
-            <div key={opt} onClick={()=>{ if(!revealed){ setSelected(opt) } }}
-              style={{ display:'flex', gap:10, alignItems:'flex-start', padding:'9px 12px', borderRadius:8, background:bg, border:`1px solid ${border}`, cursor:revealed?'default':'pointer', transition:'all 0.12s' }}>
+            <button key={opt} type="button" onClick={()=>setSelected(opt)} disabled={revealed} aria-pressed={isSel}
+              style={{ display:'flex', width:'100%', gap:10, alignItems:'flex-start', padding:'9px 12px', borderRadius:8, background:bg, border:`1px solid ${border}`, cursor:revealed?'default':'pointer', textAlign:'left', transition:'all 0.12s' }}>
               <span style={{ fontSize:11, fontWeight:700, color, fontFamily:'var(--mono)', flexShrink:0, marginTop:1 }}>{opt}</span>
               <span style={{ fontSize:12, color, lineHeight:1.5 }}>{q.o[opt]}</span>
-            </div>
+            </button>
           )
         })}
       </div>
@@ -51,8 +51,8 @@ const DailyQuestion = memo(function DailyQuestion() {
           Check Answer
         </button>
       ) : (
-        <div style={{ background:'var(--bg)', borderRadius:8, padding:'10px 14px', fontSize:12, color:'var(--muted)', lineHeight:1.7 }}>
-          {selected===q.a?'✅ Correct! — ':'❌ Wrong — '}{q.e}
+        <div role="status" aria-live="polite" style={{ background:'var(--bg)', borderRadius:8, padding:'10px 14px', fontSize:12, color:'var(--muted)', lineHeight:1.7 }}>
+          {selected===q.a?'Correct! — ':'Wrong — '}{q.e}
         </div>
       )}
     </div>
@@ -146,8 +146,8 @@ export default function Home({ user, history, weakness, resumeInfo, onStartMock,
       </div>
 
       {/* Full mock CTA */}
-      <div onClick={()=>onStartMock({isFull:true})}
-        style={{ background:'linear-gradient(135deg,#FF6B0010 0%,#FF6B0004 100%)', border:'1px solid #FF6B0028', borderRadius:14, padding:'22px 28px', cursor:'pointer', marginBottom:24, display:'flex', alignItems:'center', justifyContent:'space-between', transition:'border-color 0.15s' }}
+      <button type="button" onClick={()=>onStartMock({isFull:true})} aria-label="Start full NEET mock, 180 questions, 720 marks"
+        style={{ width:'100%', fontFamily:'var(--font)', textAlign:'left', background:'linear-gradient(135deg,#FF6B0010 0%,#FF6B0004 100%)', border:'1px solid #FF6B0028', borderRadius:14, padding:'22px 28px', cursor:'pointer', marginBottom:24, display:'flex', alignItems:'center', justifyContent:'space-between', transition:'border-color 0.15s' }}
         onMouseEnter={e=>e.currentTarget.style.borderColor='#FF6B0060'}
         onMouseLeave={e=>e.currentTarget.style.borderColor='#FF6B0028'}
       >
@@ -156,13 +156,13 @@ export default function Home({ user, history, weakness, resumeInfo, onStartMock,
           <div style={{ fontSize:12, color:'var(--muted)', marginBottom:10 }}>180 Questions · Physics 45 · Chemistry 45 · Biology 90 · 3hr 20min</div>
           <div style={{ fontSize:10, color:'var(--dim)', marginBottom:10 }}>PYQ-tagged bank · +4 / −1 · 720 marks</div>
           <div style={{ display:'flex', gap:8 }}>
-            <LiquidTag color="var(--blue)">⚡ Physics</LiquidTag>
-            <LiquidTag color="var(--orange)">⚗️ Chemistry</LiquidTag>
-            <LiquidTag color="var(--pink)">🧬 Biology</LiquidTag>
+<LiquidTag color="var(--blue)">PHY · Physics</LiquidTag>
+              <LiquidTag color="var(--orange)">CHEM · Chemistry</LiquidTag>
+              <LiquidTag color="var(--pink)">BIO · Biology</LiquidTag>
           </div>
         </div>
         <div style={{ fontSize:30, color:'var(--orange)', fontWeight:300 }}>→</div>
-      </div>
+      </button>
 
       {/* 3-col grid */}
       <div className="home-columns" style={{ display:'grid', gridTemplateColumns:'1fr 1fr 1fr', gap:16 }}>

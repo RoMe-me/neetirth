@@ -49,11 +49,11 @@ const QuestionCard = memo(function QuestionCard({ q, idx, onAnswered }) {
           if (shown && correct)           { bg='rgba(0,229,170,0.10)';  border='rgba(0,229,170,0.40)';  col='var(--green)'  }
           if (shown && isSel && !correct) { bg='rgba(255,77,141,0.10)'; border='rgba(255,77,141,0.40)'; col='var(--pink)'   }
           return (
-            <div key={opt} onClick={() => { if (!shown) setSel(opt) }}
-              style={{ display:'flex', gap:10, alignItems:'flex-start', padding:'9px 12px', borderRadius:8, background:bg, border:`1px solid ${border}`, cursor:shown?'default':'pointer', transition:'all 0.12s' }}>
+            <button key={opt} type="button" onClick={() => setSel(opt)} disabled={shown} aria-pressed={isSel}
+              style={{ display:'flex', width:'100%', gap:10, alignItems:'flex-start', padding:'9px 12px', borderRadius:8, background:bg, border:`1px solid ${border}`, cursor:shown?'default':'pointer', textAlign:'left', transition:'all 0.12s' }}>
               <span style={{ fontSize:11, fontWeight:700, color:col, fontFamily:'var(--mono)', flexShrink:0, marginTop:1 }}>{opt}</span>
               <span style={{ fontSize:12, color:col, lineHeight:1.6 }}>{(q.o||q.options)?.[opt]}</span>
-            </div>
+            </button>
           )
         })}
       </div>
@@ -63,7 +63,7 @@ const QuestionCard = memo(function QuestionCard({ q, idx, onAnswered }) {
           Check Answer
         </button>
       ) : (
-        <div style={{ background:'rgba(255,255,255,0.03)', borderRadius:8, padding:'10px 14px', fontSize:12, color:'var(--muted)', lineHeight:1.7, borderLeft:`3px solid ${sel===(q.a||q.correct)?'var(--green)':'var(--pink)'}` }}>
+        <div role="status" aria-live="polite" style={{ background:'rgba(255,255,255,0.03)', borderRadius:8, padding:'10px 14px', fontSize:12, color:'var(--muted)', lineHeight:1.7, borderLeft:`3px solid ${sel===(q.a||q.correct)?'var(--green)':'var(--pink)'}` }}>
           {sel===(q.a||q.correct)?'✅ Correct — ':`❌ Wrong (Ans: ${q.a||q.correct}) — `}{q.e||q.explanation}
         </div>
       )}
