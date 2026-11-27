@@ -2,22 +2,22 @@ import { LiquidBadge } from './LiquidBlock.jsx'
 import { useEffect, useState } from 'react'
 
 const NAV = [
-  { id:'home',     icon:'⬡', label:'Dashboard' },
-  { id:'study',    icon:'⌘', label:'Study Hub' },
-  { id:'mock',     icon:'◎', label:'Mock Tests' },
-  { id:'progress', icon:'◈', label:'Progress' },
-  { id:'pyq',      icon:'◫', label:'PYQ Bank' },
-  { id:'practice', icon:'✦', label:'Practice' },
+  { id:'home',     icon:'D', label:'Dashboard' },
+  { id:'study',    icon:'SH', label:'Study Hub' },
+  { id:'mock',     icon:'MT', label:'Mock Tests' },
+  { id:'progress', icon:'PR', label:'Progress' },
+  { id:'pyq',      icon:'PY', label:'PYQ Bank' },
+  { id:'practice', icon:'Q', label:'Practice' },
   { id:'ask',      icon:'AI', label:'Ask AI' },
 ]
 
 const COURSES = [
-  { id:'neet',    icon:'🧬', label:'NEET UG',       active:true },
-  { id:'jee',     icon:'⚡', label:'JEE Main',       soon:true },
-  { id:'jeeadv',  icon:'🔬', label:'JEE Advanced',   soon:true },
-  { id:'upsc',    icon:'🏛', label:'UPSC CSE',       soon:true },
-  { id:'cuet',    icon:'📝', label:'CUET UG',        soon:true },
-  { id:'boards',  icon:'📚', label:'Class 12 Boards', soon:true },
+  { id:'neet',    icon:'N', label:'NEET UG',       active:true },
+  { id:'jee',     icon:'JM', label:'JEE Main',       soon:true },
+  { id:'jeeadv',  icon:'JA', label:'JEE Advanced',   soon:true },
+  { id:'upsc',    icon:'UP', label:'UPSC CSE',       soon:true },
+  { id:'cuet',    icon:'CU', label:'CUET UG',        soon:true },
+  { id:'boards',  icon:'12', label:'Class 12 Boards', soon:true },
 ]
 
 function isActive(page, id) {
@@ -60,7 +60,7 @@ export default function Layout({ page, onNav, user, children }) {
         <div style={{ padding:collapsed?'22px 0':'22px 20px', borderBottom:'1px solid var(--border)', display:'flex', alignItems:'center', justifyContent:collapsed?'center':'space-between' }}>
           {!collapsed && (
             <div>
-              <div style={{ fontSize:15, fontWeight:800, color:'var(--orange)', letterSpacing:1 }}>नीतीर्थ</div>
+              <div style={{ fontFamily:'Noto Sans Devanagari, sans-serif', fontSize:15, fontWeight:700, color:'var(--orange)', letterSpacing:1 }}>नीतीर्थ</div>
               <div style={{ fontSize:8, color:'var(--dim)', letterSpacing:4, marginTop:1 }}>NEETIRTH</div>
             </div>
           )}
@@ -82,7 +82,7 @@ export default function Layout({ page, onNav, user, children }) {
                   borderRadius:8, marginBottom:2, color:active?'var(--orange)':'var(--muted)',
                   fontSize:13, fontWeight:active?600:400, transition:'all 0.28s var(--spring)', whiteSpace:'nowrap',
                 }}>
-                  <span style={{ fontSize:15, flexShrink:0 }}>{item.icon}</span>
+                  <span aria-hidden="true" style={{ fontFamily:'var(--mono)', fontSize:10, fontWeight:600, width:18, textAlign:'center', flexShrink:0 }}>{item.icon}</span>
                   {!collapsed && <span>{item.label}</span>}
                 </button>
               )
@@ -101,7 +101,7 @@ export default function Layout({ page, onNav, user, children }) {
                 background:course.active?'#FF6B0010':'none', border:`1px solid ${course.active?'#FF6B0025':'transparent'}`,
                 cursor:course.soon?'not-allowed':'default', fontSize:13, fontWeight:course.active?600:400, position:'relative', transition:'all 0.28s var(--spring)',
               }}>
-                <span style={{ fontSize:14, flexShrink:0, opacity:course.soon?0.5:1 }}>{course.icon}</span>
+                <span aria-hidden="true" style={{ fontFamily:'var(--mono)', fontSize:10, fontWeight:600, width:18, textAlign:'center', flexShrink:0, opacity:course.soon?0.5:1 }}>{course.icon}</span>
                 {!collapsed && (
                   <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', flex:1, minWidth:0 }}>
                     <span style={{ opacity:course.soon?0.45:1, overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>{course.label}</span>
@@ -118,7 +118,7 @@ export default function Layout({ page, onNav, user, children }) {
           {collapsed
             ? <div style={{ fontSize:16, color:'var(--orange)' }}>◉</div>
             : <>
-                <div style={{ fontSize:10, color:'var(--dim)', marginBottom:4, letterSpacing:1 }}>SIGNED IN</div>
+                <div style={{ fontSize:10, color:'var(--dim)', marginBottom:4, letterSpacing:1 }}>STUDYING AS</div>
                 <div style={{ fontSize:12, fontWeight:600, color:'var(--text)', overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>{user?.name || 'Student'}</div>
                 <div style={{ fontSize:10, color:'var(--dim)', marginTop:2 }}>Free forever · data stays local</div>
               </>

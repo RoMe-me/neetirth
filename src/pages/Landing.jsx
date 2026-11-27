@@ -7,7 +7,8 @@ export default function Landing({ onEnter }) {
   const content = getContentStats()
   const [err, setErr] = useState('')
 
-  const enter = () => {
+  const enter = event => {
+    event.preventDefault()
     const clean = name.trim()
     if (clean.length < 2) return setErr('Name must be at least 2 characters.')
     if (clean.length > 30) return setErr('Keep it under 30 characters.')
@@ -64,23 +65,29 @@ export default function Landing({ onEnter }) {
           <div style={{ fontSize:13, color:'var(--muted)', marginBottom:28, lineHeight:1.7 }}>
             No email. No password. Just your name — your progress is saved to your device.
           </div>
-          <input
-            value={name}
-            onChange={e=>{ setName(e.target.value); setErr('') }}
-            onKeyDown={e=>e.key==='Enter'&&enter()}
-            placeholder="e.g. Aryan_Dropper27"
-            maxLength={30}
-            autoFocus
-            style={{ width:'100%', background:'rgba(255,255,255,0.075)', border:'1px solid var(--border)', borderRadius:16, padding:'15px 16px', fontSize:15, color:'var(--text)', outline:'none', marginBottom: err?8:20, fontFamily:'var(--font)', transition:'border-color 0.15s' }}
-            onFocus={e=>e.target.style.borderColor='var(--orange)'}
-            onBlur={e=>e.target.style.borderColor='var(--border)'}
-          />
-          {err && <div style={{ fontSize:12, color:'var(--pink)', marginBottom:16 }}>⚠ {err}</div>}
-          <button onClick={enter} disabled={!name.trim()}
-            className={name.trim() ? 'liquid-cta' : ''}
-            style={{ width:'100%', padding:'15px', background:name.trim()?'linear-gradient(135deg, var(--orange), #FF9B45)':'var(--border)', border:'1px solid rgba(255,255,255,.12)', borderRadius:16, color:name.trim()?'#fff':'var(--dim)', fontSize:15, fontWeight:800, letterSpacing:0.5, transition:'all 0.28s var(--spring)', cursor:name.trim()?'pointer':'default' }}>
-            Begin →
-          </button>
+          <form onSubmit={enter}>
+            <label htmlFor="student-name" className="sr-only">Your name</label>
+            <input
+              id="student-name"
+              value={name}
+              onChange={e=>{ setName(e.target.value); setErr('') }}
+              onKeyDown={e=>{ if (e.key === 'Enter' && (e.nativeEvent.isComposing || e.keyCode === 229)) e.preventDefault() }}
+              placeholder="e.g. Aryan_Dropper27"
+              maxLength={30}
+              autoFocus
+              aria-invalid={Boolean(err)}
+              aria-describedby={err ? 'student-name-error' : undefined}
+              style={{ width:'100%', background:'rgba(255,255,255,0.075)', border:'1px solid var(--border)', borderRadius:16, padding:'15px 16px', fontSize:15, color:'var(--text)', outline:'none', marginBottom: err?8:20, fontFamily:'var(--font)', transition:'border-color 0.15s' }}
+              onFocus={e=>e.target.style.borderColor='var(--orange)'}
+              onBlur={e=>e.target.style.borderColor='var(--border)'}
+            />
+            {err && <div id="student-name-error" role="alert" style={{ fontSize:12, color:'var(--pink)', marginBottom:16 }}>⚠ {err}</div>}
+            <button type="submit" disabled={!name.trim()}
+              className={name.trim() ? 'liquid-cta' : ''}
+              style={{ width:'100%', padding:'15px', background:name.trim()?'linear-gradient(135deg, var(--orange), #FF9B45)':'var(--border)', border:'1px solid rgba(255,255,255,.12)', borderRadius:16, color:name.trim()?'#fff':'var(--dim)', fontSize:15, fontWeight:800, letterSpacing:0.5, transition:'all 0.28s var(--spring)', cursor:name.trim()?'pointer':'default' }}>
+              Begin →
+            </button>
+          </form>
           <div style={{ fontSize:11, color:'var(--dim)', marginTop:20, textAlign:'center', lineHeight:1.8 }}>
             🔒 Your data stays on your device only.<br/>No tracking. No ads. Built by a NEET aspirant.
           </div>
